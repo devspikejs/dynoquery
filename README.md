@@ -1,6 +1,6 @@
 # DynoQuery
 
-A lightweight wrapper for Amazon DynamoDB using the AWS SDK v3.
+A lightweight wrapper for Amazon DynamoDB using the AWS SDK v3, specifically designed for **Single-Table Design** patterns.
 
 ## Installation
 
@@ -11,6 +11,7 @@ npm install dynoquery
 ## Features
 
 - Basic CRUD operations (create, get, update, delete)
+- Optimized for **Single-Table Design**
 - Model-based approach for easy data management
 - Query and Scan support
 - Batch operations (batchGet, batchWrite)
