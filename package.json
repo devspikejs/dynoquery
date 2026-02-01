@@ -1,0 +1,42 @@
+{
+  "name": "dynoquery",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/dynoquery"
+  },
+  "description": "A lightweight wrapper for Amazon DynamoDB using the AWS SDK v3",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "jest src",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "dynamodb",
+    "aws",
+    "wrapper",
+    "query",
+    "sdk-v3"
+  ],
+  "author": "",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.980.0",
+    "@aws-sdk/lib-dynamodb": "^3.980.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "typescript": "^5.5.3"
+  }
+}
