@@ -58,7 +58,7 @@ describe("DynoQuery Partition Registry", () => {
     const prod = (db as any).Product("p123");
 
     mockSend.mockResolvedValueOnce({ Items: [{ PK: "PROD#p123", SK: "INFO", price: 100 }] });
-    await prod.load();
+    await prod.loadAll();
 
     const data = await prod.get("INFO");
     expect(data.price).toBe(100);
