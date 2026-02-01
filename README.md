@@ -38,9 +38,9 @@ async function example() {
   const john = db.User('john@example.com');
   
   // Load all data for this partition (optional, but good for multiple reads)
-  await john.load();
+  await john.loadAll();
   
-  // john.get() now loads data immediately (using cache if loaded)
+  // john.get() loads data immediately (using cache if loaded)
   const userMetadata = await john.get('METADATA');
   console.log(userMetadata);
 
@@ -90,9 +90,10 @@ A model-based abstraction for a specific data type.
 ### Partition
 A way to manage models and data within a specific partition.
 - `get(sk)`: Fetches data for a specific sort key (returns a Promise).
-- `load()`: Fetches all items in the partition and caches them.
+- `loadAll()`: Fetches all items in the partition and caches them.
 - `create(sk, data)`: Creates an item in the partition and returns its `Model`.
 - `model(sk)`: Get a `Model` instance for a specific sort key.
+- `deleteAll()`: Deletes all items in the partition.
 
 ## License
 

@@ -52,7 +52,7 @@ class Partition {
     /**
      * Load all data for this partition key.
      */
-    load() {
+    loadAll() {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.db.query({
                 TableName: this.tableName,
@@ -123,6 +123,45 @@ class Partition {
                 this.cache[sk] = data;
             }
             return data;
+        });
+    }
+    /**
+     * Delete all data in this partition.
+     */
+    deleteAll() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.db.query({
+                TableName: this.tableName,
+                KeyConditionExpression: "PK = :pk",
+                ExpressionAttributeValues: {
+                    ":pk": this.pk,
+                },
+            });
+            if (response.Items && response.Items.length > 0) {
+                // DynamoDB BatchWriteItem supports up to 25 requests at once
+                const items = response.Items;
+                const chunks = [];
+                for (let i = 0; i < items.length; i += 25) {
+                    chunks.push(items.slice(i, i + 25));
+                }
+                for (const chunk of chunks) {
+                    const deleteRequests = chunk.map((item) => ({
+                        DeleteRequest: {
+                            Key: {
+                                PK: item.PK,
+                                SK: item.SK,
+                            },
+                        },
+                    }));
+                    yield this.db.batchWrite({
+                        RequestItems: {
+                            [this.tableName]: deleteRequests,
+                        },
+                    });
+                }
+            }
+            this.cache = {};
+            this.isLoaded = false;
         });
     }
 }

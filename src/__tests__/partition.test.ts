@@ -29,7 +29,7 @@ describe("Partition", () => {
 
   it("should fetch data immediately using get()", async () => {
     mockSend.mockResolvedValueOnce({ Item: { name: "John", SK: "PROFILE" } });
-    
+
     const data = await userPartition.get("PROFILE");
 
     expect(mockSend).toHaveBeenCalledWith(
@@ -45,14 +45,14 @@ describe("Partition", () => {
     expect(data).toEqual({ name: "John", SK: "PROFILE" });
   });
 
-  it("should load all partition data using load() and then return from cache", async () => {
+  it("should loadAll all partition data using loadAll() and then return from cache", async () => {
     const mockItems = [
       { PK: "USER#john@example.com", SK: "METADATA", email: "john@example.com" },
       { PK: "USER#john@example.com", SK: "PROFILE", name: "John" },
     ];
     mockSend.mockResolvedValueOnce({ Items: mockItems });
-    
-    await userPartition.load();
+
+    await userPartition.loadAll();
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -99,7 +99,7 @@ describe("Partition", () => {
     mockSend.mockResolvedValue({ }); // default response for all calls
 
     const profile = await userPartition.create("PROFILE", { name: "John Doe" });
-    
+
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.objectContaining({
@@ -126,7 +126,7 @@ describe("Partition", () => {
 
   it("should update cache when model.update is called", async () => {
     const profileModel = userPartition.model("PROFILE");
-    
+
     // update calls db.get then db.create (via save)
     mockSend
       .mockResolvedValue({ }) // default
@@ -146,7 +146,7 @@ describe("Partition", () => {
 
   it("should remove from cache when model.remove is called", async () => {
     const profileModel = userPartition.model("PROFILE");
-    
+
     // Pre-populate cache
     mockSend.mockResolvedValueOnce({ Item: { PK: "USER#john@example.com", SK: "PROFILE", name: "John" } });
     await userPartition.get("PROFILE");
@@ -156,6 +156,55 @@ describe("Partition", () => {
     await profileModel.remove();
 
     expect(userPartition["cache"]["PROFILE"]).toBeUndefined();
+  });
+
+  it("should delete all items in the partition using deleteAll()", async () => {
+    const mockItems = [
+      { PK: "USER#john@example.com", SK: "METADATA" },
+      { PK: "USER#john@example.com", SK: "PROFILE" },
+    ];
+
+    // 1. Query call to find items
+    // 2. batchWrite call to delete items
+    mockSend
+      .mockResolvedValueOnce({ Items: mockItems }) // query
+      .mockResolvedValueOnce({}); // batchWrite
+
+    // Pre-populate cache to verify it's cleared
+    userPartition["cache"]["METADATA"] = mockItems[0];
+    userPartition["isLoaded"] = true;
+
+    await userPartition.deleteAll();
+
+    // Verify query was called
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          KeyConditionExpression: "PK = :pk",
+        }),
+      })
+    );
+
+    // Verify batchWrite was called
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          RequestItems: expect.objectContaining({
+            "AppTable": expect.arrayContaining([
+              expect.objectContaining({
+                DeleteRequest: expect.objectContaining({
+                  Key: { PK: "USER#john@example.com", SK: "METADATA" }
+                })
+              })
+            ])
+          })
+        }),
+      })
+    );
+
+    // Verify cache and isLoaded are reset
+    expect(userPartition["cache"]).toEqual({});
+    expect(userPartition["isLoaded"]).toBe(false);
   });
 
   it("should throw error if tableName is not provided", () => {
@@ -174,7 +223,7 @@ describe("Partition", () => {
 
     it("should work correctly when subclassed", async () => {
       const john = new UserPartition(db, "john@example.com");
-      
+
       mockSend.mockResolvedValueOnce({ Item: { email: "john@example.com", name: "John" } });
       const data = await john.get("METADATA");
 

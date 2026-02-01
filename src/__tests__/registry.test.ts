@@ -54,9 +54,9 @@ describe("DynoQuery Partition Registry", () => {
     );
   });
 
-  it("should allow calling db.Product(id) and use load()", async () => {
+  it("should allow calling db.Product(id) and use loadAll()", async () => {
     const prod = (db as any).Product("p123");
-    
+
     mockSend.mockResolvedValueOnce({ Items: [{ PK: "PROD#p123", SK: "INFO", price: 100 }] });
     await prod.load();
 

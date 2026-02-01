@@ -15,7 +15,7 @@ export declare class Partition {
     /**
      * Load all data for this partition key.
      */
-    load(): Promise<this>;
+    loadAll(): Promise<this>;
     /**
      * Get a model instance for a specific SK within this partition.
      */
@@ -31,4 +31,8 @@ export declare class Partition {
      * Otherwise, it fetches the data immediately.
      */
     get<T = any>(sk: string): Promise<T | null>;
+    /**
+     * Delete all data in this partition.
+     */
+    deleteAll(): Promise<void>;
 }
