@@ -34,6 +34,8 @@ class DynoQuery {
         delete clientConfig.tableName;
         delete clientConfig.pkPrefix;
         delete clientConfig.partitions;
+        delete clientConfig.pkName;
+        delete clientConfig.skName;
         this.client = new client_dynamodb_1.DynamoDBClient(clientConfig);
         this.docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(this.client, {
             marshallOptions: {
@@ -42,6 +44,8 @@ class DynoQuery {
         });
         this.defaultTableName = config.tableName;
         this.globalPkPrefix = config.pkPrefix || "";
+        this.pkName = config.pkName || "PK";
+        this.skName = config.skName || "SK";
         if (config.partitions) {
             Object.entries(config.partitions).forEach(([name, def]) => {
                 this[name] = (id) => {
@@ -129,9 +133,9 @@ class DynoQuery {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.defaultTableName && params.RequestItems) {
                 // Note: Batch operations are a bit trickier because TableName is a key in RequestItems
-                // This wrapper doesn't automatically add it to RequestItems yet, 
-                // but let's see if we should handle it. 
-                // For now, let's keep it as is or add it if RequestItems is empty? 
+                // This wrapper doesn't automatically add it to RequestItems yet,
+                // but let's see if we should handle it.
+                // For now, let's keep it as is or add it if RequestItems is empty?
                 // Usually BatchGetCommandInput is complex.
             }
             const command = new lib_dynamodb_1.BatchGetCommand(params);
@@ -152,6 +156,12 @@ class DynoQuery {
     }
     getPkPrefix() {
         return this.globalPkPrefix;
+    }
+    getPkName() {
+        return this.pkName;
+    }
+    getSkName() {
+        return this.skName;
     }
 }
 exports.DynoQuery = DynoQuery;

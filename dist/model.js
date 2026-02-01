@@ -16,6 +16,8 @@ class Model {
         this.tableName = config.tableName || db.getTableName();
         this.pkPrefix = config.pkPrefix;
         this.skValue = config.skValue;
+        this.pkName = db.getPkName();
+        this.skName = db.getSkName();
         this.onUpdate = config.onUpdate;
         if (!this.tableName) {
             throw new Error("TableName must be provided in ModelConfig or DynoQueryConfig");
@@ -36,8 +38,8 @@ class Model {
             const response = yield this.db.get({
                 TableName: this.getTableName(),
                 Key: {
-                    PK: this.getPK(id),
-                    SK: this.skValue,
+                    [this.pkName]: this.getPK(id),
+                    [this.skName]: this.skValue,
                 },
             });
             return response.Item || null;
@@ -48,7 +50,7 @@ class Model {
      */
     save(data_1) {
         return __awaiter(this, arguments, void 0, function* (data, id = "") {
-            const item = Object.assign({ PK: this.getPK(id), SK: this.skValue }, data);
+            const item = Object.assign({ [this.pkName]: this.getPK(id), [this.skName]: this.skValue }, data);
             yield this.db.create({
                 TableName: this.getTableName(),
                 Item: item,
@@ -70,8 +72,8 @@ class Model {
             const response = yield this.db.get({
                 TableName: this.getTableName(),
                 Key: {
-                    PK: this.getPK(id),
-                    SK: this.skValue,
+                    [this.pkName]: this.getPK(id),
+                    [this.skName]: this.skValue,
                 },
             });
             const current = response.Item || {};
@@ -87,8 +89,8 @@ class Model {
             yield this.db.delete({
                 TableName: this.getTableName(),
                 Key: {
-                    PK: this.getPK(id),
-                    SK: this.skValue,
+                    [this.pkName]: this.getPK(id),
+                    [this.skName]: this.skValue,
                 },
             });
             if (this.onUpdate) {

@@ -17,6 +17,8 @@ class Partition {
         this.isLoaded = false;
         this.db = db;
         this.tableName = config.tableName || db.getTableName();
+        this.pkName = db.getPkName();
+        this.skName = db.getSkName();
         if (config.pk) {
             this.pk = config.pk;
         }
@@ -56,15 +58,18 @@ class Partition {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.db.query({
                 TableName: this.tableName,
-                KeyConditionExpression: "PK = :pk",
+                KeyConditionExpression: "#pk = :pk",
+                ExpressionAttributeNames: {
+                    "#pk": this.pkName,
+                },
                 ExpressionAttributeValues: {
                     ":pk": this.pk,
                 },
             });
             if (response.Items) {
                 response.Items.forEach((item) => {
-                    if (item.SK) {
-                        this.cache[item.SK] = item;
+                    if (item[this.skName]) {
+                        this.cache[item[this.skName]] = item;
                     }
                 });
             }
@@ -132,7 +137,10 @@ class Partition {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.db.query({
                 TableName: this.tableName,
-                KeyConditionExpression: "PK = :pk",
+                KeyConditionExpression: "#pk = :pk",
+                ExpressionAttributeNames: {
+                    "#pk": this.pkName,
+                },
                 ExpressionAttributeValues: {
                     ":pk": this.pk,
                 },
@@ -148,8 +156,8 @@ class Partition {
                     const deleteRequests = chunk.map((item) => ({
                         DeleteRequest: {
                             Key: {
-                                PK: item.PK,
-                                SK: item.SK,
+                                [this.pkName]: item[this.pkName],
+                                [this.skName]: item[this.skName],
                             },
                         },
                     }));

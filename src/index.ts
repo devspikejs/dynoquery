@@ -22,6 +22,8 @@ import { Partition } from "./partition";
 
 export interface DynoQueryConfig {
   tableName?: string;
+  pkName?: string;
+  skName?: string;
   region?: string;
   endpoint?: string;
   pkPrefix?: string;
@@ -38,6 +40,8 @@ export class DynoQuery {
   private docClient: DynamoDBDocumentClient;
   private defaultTableName?: string;
   private globalPkPrefix: string;
+  private pkName: string;
+  private skName: string;
   [key: string]: any;
 
   constructor(config: DynoQueryConfig = {}) {
@@ -46,6 +50,8 @@ export class DynoQuery {
     delete clientConfig.tableName;
     delete clientConfig.pkPrefix;
     delete clientConfig.partitions;
+    delete clientConfig.pkName;
+    delete clientConfig.skName;
 
     this.client = new DynamoDBClient(clientConfig);
     this.docClient = DynamoDBDocumentClient.from(this.client, {
@@ -55,6 +61,8 @@ export class DynoQuery {
     });
     this.defaultTableName = config.tableName;
     this.globalPkPrefix = config.pkPrefix || "";
+    this.pkName = config.pkName || "PK";
+    this.skName = config.skName || "SK";
 
     if (config.partitions) {
       Object.entries(config.partitions).forEach(([name, def]) => {
@@ -137,9 +145,9 @@ export class DynoQuery {
   async batchGet(params: BatchGetCommandInput) {
     if (this.defaultTableName && params.RequestItems) {
       // Note: Batch operations are a bit trickier because TableName is a key in RequestItems
-      // This wrapper doesn't automatically add it to RequestItems yet, 
-      // but let's see if we should handle it. 
-      // For now, let's keep it as is or add it if RequestItems is empty? 
+      // This wrapper doesn't automatically add it to RequestItems yet,
+      // but let's see if we should handle it.
+      // For now, let's keep it as is or add it if RequestItems is empty?
       // Usually BatchGetCommandInput is complex.
     }
     const command = new BatchGetCommand(params);
@@ -160,6 +168,14 @@ export class DynoQuery {
 
   getPkPrefix(): string {
     return this.globalPkPrefix;
+  }
+
+  getPkName(): string {
+    return this.pkName;
+  }
+
+  getSkName(): string {
+    return this.skName;
   }
 }
 

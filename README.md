@@ -25,6 +25,8 @@ import { DynoQuery } from 'dynoquery';
 const db = new DynoQuery({
   region: 'us-east-1',
   tableName: 'MyTable', // Define default table for single-table structure
+  pkName: 'PK', // Optional: Custom attribute name for Partition Key (default: 'PK')
+  skName: 'SK', // Optional: Custom attribute name for Sort Key (default: 'SK')
   pkPrefix: 'TENANT#A#', // Optional: Global prefix for all partitions (useful for multitenancy)
   // optional endpoint for local development
   // endpoint: 'http://localhost:8000'

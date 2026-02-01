@@ -57,7 +57,10 @@ describe("Partition", () => {
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.objectContaining({
-          KeyConditionExpression: "PK = :pk",
+          KeyConditionExpression: "#pk = :pk",
+          ExpressionAttributeNames: {
+            "#pk": "PK",
+          },
           ExpressionAttributeValues: {
             ":pk": "USER#john@example.com",
           },
@@ -180,7 +183,10 @@ describe("Partition", () => {
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.objectContaining({
-          KeyConditionExpression: "PK = :pk",
+          KeyConditionExpression: "#pk = :pk",
+          ExpressionAttributeNames: {
+            "#pk": "PK",
+          },
         }),
       })
     );

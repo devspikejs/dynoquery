@@ -12,6 +12,8 @@ export class Model<T = any> {
   protected tableName?: string;
   protected pkPrefix: string;
   protected skValue: string;
+  protected pkName: string;
+  protected skName: string;
   protected onUpdate?: (sk: any, data: any) => void;
 
   constructor(db: DynoQuery, config: ModelConfig<T>) {
@@ -19,6 +21,8 @@ export class Model<T = any> {
     this.tableName = config.tableName || db.getTableName();
     this.pkPrefix = config.pkPrefix;
     this.skValue = config.skValue;
+    this.pkName = db.getPkName();
+    this.skName = db.getSkName();
     this.onUpdate = config.onUpdate;
 
     if (!this.tableName) {
@@ -42,8 +46,8 @@ export class Model<T = any> {
     const response = await this.db.get({
       TableName: this.getTableName(),
       Key: {
-        PK: this.getPK(id),
-        SK: this.skValue,
+        [this.pkName]: this.getPK(id),
+        [this.skName]: this.skValue,
       },
     });
     return (response.Item as unknown as T) || null;
@@ -54,8 +58,8 @@ export class Model<T = any> {
    */
   async save(data: T, id: string = ""): Promise<void> {
     const item = {
-      PK: this.getPK(id),
-      SK: this.skValue,
+      [this.pkName]: this.getPK(id),
+      [this.skName]: this.skValue,
       ...data,
     };
     await this.db.create({
@@ -79,8 +83,8 @@ export class Model<T = any> {
     const response = await this.db.get({
       TableName: this.getTableName(),
       Key: {
-        PK: this.getPK(id),
-        SK: this.skValue,
+        [this.pkName]: this.getPK(id),
+        [this.skName]: this.skValue,
       },
     });
     const current = (response.Item as unknown as T) || ({} as T);
@@ -95,8 +99,8 @@ export class Model<T = any> {
     await this.db.delete({
       TableName: this.getTableName(),
       Key: {
-        PK: this.getPK(id),
-        SK: this.skValue,
+        [this.pkName]: this.getPK(id),
+        [this.skName]: this.skValue,
       },
     });
     if (this.onUpdate) {

@@ -10,6 +10,8 @@ export declare class Model<T = any> {
     protected tableName?: string;
     protected pkPrefix: string;
     protected skValue: string;
+    protected pkName: string;
+    protected skName: string;
     protected onUpdate?: (sk: any, data: any) => void;
     constructor(db: DynoQuery, config: ModelConfig<T>);
     protected getTableName(): string;

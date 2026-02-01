@@ -9,6 +9,8 @@ export declare class Partition {
     protected db: DynoQuery;
     protected tableName?: string;
     protected pk: string;
+    protected pkName: string;
+    protected skName: string;
     protected cache: Record<string, any>;
     protected isLoaded: boolean;
     constructor(db: DynoQuery, config: PartitionConfig, id?: string);

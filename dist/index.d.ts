@@ -1,6 +1,8 @@
 import { PutCommandInput, GetCommandInput, UpdateCommandInput, DeleteCommandInput, QueryCommandInput, ScanCommandInput, BatchGetCommandInput, BatchWriteCommandInput } from "@aws-sdk/lib-dynamodb";
 export interface DynoQueryConfig {
     tableName?: string;
+    pkName?: string;
+    skName?: string;
     region?: string;
     endpoint?: string;
     pkPrefix?: string;
@@ -18,6 +20,8 @@ export declare class DynoQuery {
     private docClient;
     private defaultTableName?;
     private globalPkPrefix;
+    private pkName;
+    private skName;
     [key: string]: any;
     constructor(config?: DynoQueryConfig);
     /**
@@ -54,6 +58,8 @@ export declare class DynoQuery {
     batchWrite(params: BatchWriteCommandInput): Promise<import("@aws-sdk/lib-dynamodb").BatchWriteCommandOutput>;
     getTableName(): string | undefined;
     getPkPrefix(): string;
+    getPkName(): string;
+    getSkName(): string;
 }
 export * from "./model";
 export * from "./partition";

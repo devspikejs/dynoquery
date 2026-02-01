@@ -11,12 +11,16 @@ export class Partition {
   protected db: DynoQuery;
   protected tableName?: string;
   protected pk: string;
+  protected pkName: string;
+  protected skName: string;
   protected cache: Record<string, any> = {};
   protected isLoaded: boolean = false;
 
   constructor(db: DynoQuery, config: PartitionConfig, id?: string) {
     this.db = db;
     this.tableName = config.tableName || db.getTableName();
+    this.pkName = db.getPkName();
+    this.skName = db.getSkName();
 
     if (config.pk) {
       this.pk = config.pk;
@@ -62,7 +66,10 @@ export class Partition {
   async loadAll(): Promise<this> {
     const response = await this.db.query({
       TableName: this.tableName,
-      KeyConditionExpression: "PK = :pk",
+      KeyConditionExpression: "#pk = :pk",
+      ExpressionAttributeNames: {
+        "#pk": this.pkName,
+      },
       ExpressionAttributeValues: {
         ":pk": this.pk,
       },
@@ -70,8 +77,8 @@ export class Partition {
 
     if (response.Items) {
       response.Items.forEach((item) => {
-        if (item.SK) {
-          this.cache[item.SK] = item;
+        if (item[this.skName]) {
+          this.cache[item[this.skName]] = item;
         }
       });
     }
@@ -139,7 +146,10 @@ export class Partition {
   async deleteAll(): Promise<void> {
     const response = await this.db.query({
       TableName: this.tableName,
-      KeyConditionExpression: "PK = :pk",
+      KeyConditionExpression: "#pk = :pk",
+      ExpressionAttributeNames: {
+        "#pk": this.pkName,
+      },
       ExpressionAttributeValues: {
         ":pk": this.pk,
       },
@@ -157,8 +167,8 @@ export class Partition {
         const deleteRequests = chunk.map((item) => ({
           DeleteRequest: {
             Key: {
-              PK: item.PK,
-              SK: item.SK,
+              [this.pkName]: item[this.pkName],
+              [this.skName]: item[this.skName],
             },
           },
         }));
