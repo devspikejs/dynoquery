@@ -36,7 +36,7 @@ describe("Custom Key Names Support", () => {
 
   it("should use custom key names in Model operations", async () => {
     const john = (db as any).User("john@example.com");
-    
+
     // Test get/find
     mockSend.mockResolvedValueOnce({ Item: { partition_key: "USER#john@example.com", sort_key: "METADATA", name: "John" } });
     await john.get("METADATA");
@@ -69,16 +69,16 @@ describe("Custom Key Names Support", () => {
     );
   });
 
-  it("should use custom key names in Partition.loadAll()", async () => {
+  it("should use custom key names in Partition.getAll()", async () => {
     const john = (db as any).User("john@example.com");
-    
-    mockSend.mockResolvedValueOnce({ 
+
+    mockSend.mockResolvedValueOnce({
       Items: [
         { partition_key: "USER#john@example.com", sort_key: "METADATA", email: "john@example.com" }
-      ] 
+      ]
     });
-    
-    await john.loadAll();
+
+    await john.getAll();
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -90,7 +90,7 @@ describe("Custom Key Names Support", () => {
         })
       })
     );
-    
+
     // Verify cache was populated using custom skName
     const data = await john.get("METADATA");
     expect(data.email).toBe("john@example.com");
@@ -99,15 +99,15 @@ describe("Custom Key Names Support", () => {
 
   it("should use custom key names in Partition.deleteAll()", async () => {
     const john = (db as any).User("john@example.com");
-    
+
     mockSend
-      .mockResolvedValueOnce({ 
+      .mockResolvedValueOnce({
         Items: [
           { partition_key: "USER#john@example.com", sort_key: "METADATA" }
-        ] 
+        ]
       })
       .mockResolvedValueOnce({}); // batchWrite
-    
+
     await john.deleteAll();
 
     expect(mockSend).toHaveBeenCalledWith(

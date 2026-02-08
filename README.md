@@ -32,6 +32,9 @@ const db = new DynoQuery({
   // endpoint: 'http://localhost:8000'
   partitions: {
     User: { pkPrefix: 'USER#' },
+  },
+  indexes: {
+    ByCategory: { indexName: 'GSI1', pkName: 'GSI1PK', skName: 'GSI1SK', pkPrefix: 'CAT#' }
   }
 });
 
@@ -40,8 +43,23 @@ async function example() {
   // Resulting PK: TENANT#A#USER#john@example.com
   const john = db.User('john@example.com');
   
+  // Use registered index
+  // Resulting GSI1PK: TENANT#A#CAT#1
+  const categories = db.ByCategory('1');
+  const items = await categories.get('100');
+  const allItems = await categories.getAll();
+  
+  // Index results are automatically mapped to models based on PK prefix
+  items.forEach(item => {
+    if (item.__model === 'User') {
+      console.log('Found user:', item.name);
+      // You can also get a Partition instance for this item
+      const userPartition = item.getPartition();
+    }
+  });
+  
   // Load all data for this partition (optional, but good for multiple reads)
-  await john.loadAll();
+  const allJohnData = await john.getAll();
   
   // john.get() loads data immediately (using cache if loaded)
   const userMetadata = await john.get('METADATA');
@@ -93,10 +111,16 @@ A model-based abstraction for a specific data type.
 ### Partition
 A way to manage models and data within a specific partition.
 - `get(sk)`: Fetches data for a specific sort key (returns a Promise).
-- `loadAll()`: Fetches all items in the partition and caches them.
+- `getAll()`: Fetches all items in the partition and caches them. Returns the items.
 - `create(sk, data)`: Creates an item in the partition and returns its `Model`.
 - `model(sk)`: Get a `Model` instance for a specific sort key.
 - `deleteAll()`: Deletes all items in the partition.
+
+### IndexQuery
+A way to query Global Secondary Indexes.
+- `get(skValue | options)`: Query items in the index. Supports `skValue` (string) for `begins_with` search, or an options object with `skValue`, `limit`, and `scanIndexForward`.
+- `getAll()`: Fetches all items in the index for the given partition key.
+- Automatically identifies models in results using `__model` and provides `getPartition()` helper.
 
 ## License
 

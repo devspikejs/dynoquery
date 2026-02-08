@@ -37,9 +37,9 @@ describe('DynoQuery', () => {
   test('create should use default TableName if not provided', async () => {
     const dynoWithTable = new DynoQuery({ region: 'us-east-1', tableName: 'DefaultTable' });
     const mockDocClientWithTable = (DynamoDBDocumentClient.from as jest.Mock).mock.results[(DynamoDBDocumentClient.from as jest.Mock).mock.results.length - 1].value;
-    
+
     await dynoWithTable.create({ Item: { id: '1' } } as any);
-    
+
     expect(mockDocClientWithTable.send).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.objectContaining({
@@ -73,7 +73,7 @@ describe('DynoQuery', () => {
     expect(mockDocClient.send).toHaveBeenCalled();
   });
 
-  test('query should call QueryCommand', async () => {
+  test('get should call QueryCommand', async () => {
     const params = {
       TableName: 'TestTable',
       KeyConditionExpression: 'id = :id',

@@ -61,9 +61,10 @@ export class Partition {
   }
 
   /**
-   * Load all data for this partition key.
+   * Fetches all items in the partition and caches them.
+   * Returns the data and caches it.
    */
-  async loadAll(): Promise<this> {
+  async getAll<T = any>(): Promise<T[]> {
     const response = await this.db.query({
       TableName: this.tableName,
       KeyConditionExpression: "#pk = :pk",
@@ -75,15 +76,14 @@ export class Partition {
       },
     });
 
-    if (response.Items) {
-      response.Items.forEach((item) => {
-        if (item[this.skName]) {
-          this.cache[item[this.skName]] = item;
-        }
-      });
-    }
+    const items = (response.Items || []) as T[];
+    items.forEach((item: any) => {
+      if (item[this.skName]) {
+        this.cache[item[this.skName]] = item;
+      }
+    });
     this.isLoaded = true;
-    return this;
+    return items;
   }
 
   /**

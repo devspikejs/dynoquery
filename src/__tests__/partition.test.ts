@@ -45,15 +45,16 @@ describe("Partition", () => {
     expect(data).toEqual({ name: "John", SK: "PROFILE" });
   });
 
-  it("should loadAll all partition data using loadAll() and then return from cache", async () => {
+  it("should getAll all partition data using getAll() and then return from cache", async () => {
     const mockItems = [
       { PK: "USER#john@example.com", SK: "METADATA", email: "john@example.com" },
       { PK: "USER#john@example.com", SK: "PROFILE", name: "John" },
     ];
     mockSend.mockResolvedValueOnce({ Items: mockItems });
 
-    await userPartition.loadAll();
+    const result = await userPartition.getAll();
 
+    expect(result).toEqual(mockItems);
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.objectContaining({
@@ -170,7 +171,7 @@ describe("Partition", () => {
     // 1. Query call to find items
     // 2. batchWrite call to delete items
     mockSend
-      .mockResolvedValueOnce({ Items: mockItems }) // query
+      .mockResolvedValueOnce({ Items: mockItems }) // get
       .mockResolvedValueOnce({}); // batchWrite
 
     // Pre-populate cache to verify it's cleared
@@ -179,7 +180,7 @@ describe("Partition", () => {
 
     await userPartition.deleteAll();
 
-    // Verify query was called
+    // Verify get was called
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.objectContaining({

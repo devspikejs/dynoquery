@@ -29,11 +29,13 @@ const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
 const partition_1 = require("./partition");
 class DynoQuery {
     constructor(config = {}) {
+        this.registeredPartitions = {};
         const clientConfig = Object.assign({}, config);
         // Remove properties that are not part of DynamoDBClientConfig
         delete clientConfig.tableName;
         delete clientConfig.pkPrefix;
         delete clientConfig.partitions;
+        delete clientConfig.indexes;
         delete clientConfig.pkName;
         delete clientConfig.skName;
         this.client = new client_dynamodb_1.DynamoDBClient(clientConfig);
@@ -47,9 +49,23 @@ class DynoQuery {
         this.pkName = config.pkName || "PK";
         this.skName = config.skName || "SK";
         if (config.partitions) {
+            this.registeredPartitions = config.partitions;
             Object.entries(config.partitions).forEach(([name, def]) => {
                 this[name] = (id) => {
                     return new partition_1.Partition(this, { pkPrefix: this.globalPkPrefix + def.pkPrefix }, id);
+                };
+            });
+        }
+        if (config.indexes) {
+            const { IndexQuery } = require("./index-query");
+            Object.entries(config.indexes).forEach(([name, def]) => {
+                this[name] = (id) => {
+                    return new IndexQuery(this, {
+                        indexName: def.indexName,
+                        pkName: def.pkName,
+                        skName: def.skName,
+                        pkValue: id
+                    });
                 };
             });
         }
@@ -163,7 +179,11 @@ class DynoQuery {
     getSkName() {
         return this.skName;
     }
+    getRegisteredPartitions() {
+        return this.registeredPartitions;
+    }
 }
 exports.DynoQuery = DynoQuery;
 __exportStar(require("./model"), exports);
 __exportStar(require("./partition"), exports);
+__exportStar(require("./index-query"), exports);

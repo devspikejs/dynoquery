@@ -14,6 +14,11 @@ export interface DynoQueryConfig {
     partitions?: Record<string, {
         pkPrefix: string;
     }>;
+    indexes?: Record<string, {
+        indexName: string;
+        pkName?: string;
+        skName?: string;
+    }>;
 }
 export declare class DynoQuery {
     private client;
@@ -22,6 +27,7 @@ export declare class DynoQuery {
     private globalPkPrefix;
     private pkName;
     private skName;
+    private registeredPartitions;
     [key: string]: any;
     constructor(config?: DynoQueryConfig);
     /**
@@ -60,6 +66,10 @@ export declare class DynoQuery {
     getPkPrefix(): string;
     getPkName(): string;
     getSkName(): string;
+    getRegisteredPartitions(): Record<string, {
+        pkPrefix: string;
+    }>;
 }
 export * from "./model";
 export * from "./partition";
+export * from "./index-query";

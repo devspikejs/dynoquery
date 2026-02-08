@@ -33,6 +33,7 @@ export interface DynoQueryConfig {
     sessionToken?: string;
   };
   partitions?: Record<string, { pkPrefix: string }>;
+  indexes?: Record<string, { indexName: string, pkName?: string, skName?: string, pkPrefix?: string }>;
 }
 
 export class DynoQuery {
@@ -42,6 +43,7 @@ export class DynoQuery {
   private globalPkPrefix: string;
   private pkName: string;
   private skName: string;
+  private registeredPartitions: Record<string, { pkPrefix: string }> = {};
   [key: string]: any;
 
   constructor(config: DynoQueryConfig = {}) {
@@ -50,6 +52,7 @@ export class DynoQuery {
     delete clientConfig.tableName;
     delete clientConfig.pkPrefix;
     delete clientConfig.partitions;
+    delete clientConfig.indexes;
     delete clientConfig.pkName;
     delete clientConfig.skName;
 
@@ -65,9 +68,25 @@ export class DynoQuery {
     this.skName = config.skName || "SK";
 
     if (config.partitions) {
+      this.registeredPartitions = config.partitions;
       Object.entries(config.partitions).forEach(([name, def]) => {
         this[name] = (id: string) => {
           return new Partition(this, { pkPrefix: this.globalPkPrefix + def.pkPrefix }, id);
+        };
+      });
+    }
+
+    if (config.indexes) {
+      const { IndexQuery } = require("./index-query");
+      Object.entries(config.indexes).forEach(([name, def]) => {
+        this[name] = (id: string) => {
+          return new IndexQuery(this, { 
+            indexName: def.indexName,
+            pkName: def.pkName,
+            skName: def.skName,
+            pkPrefix: def.pkPrefix,
+            pkValue: id
+          });
         };
       });
     }
@@ -177,7 +196,12 @@ export class DynoQuery {
   getSkName(): string {
     return this.skName;
   }
+
+  getRegisteredPartitions(): Record<string, { pkPrefix: string }> {
+    return this.registeredPartitions;
+  }
 }
 
 export * from "./model";
 export * from "./partition";
+export * from "./index-query";
