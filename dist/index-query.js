@@ -16,8 +16,8 @@ class IndexQuery {
         this.db = db;
         this.tableName = config.tableName || db.getTableName() || "";
         this.indexName = config.indexName;
-        this.pkName = config.pkName || "GSI1PK";
-        this.skName = config.skName || "GSI1SK";
+        this.pkName = config.pkName || (this.indexName + "PK");
+        this.skName = config.skName || (this.indexName + "SK");
         const globalPrefix = db.getPkPrefix();
         const indexPrefix = config.pkPrefix || "";
         let finalPrefix = indexPrefix;
