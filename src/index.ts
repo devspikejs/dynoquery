@@ -47,14 +47,15 @@ export class DynoQuery {
   [key: string]: any;
 
   constructor(config: DynoQueryConfig = {}) {
-    const clientConfig: any = { ...config };
-    // Remove properties that are not part of DynamoDBClientConfig
-    delete clientConfig.tableName;
-    delete clientConfig.pkPrefix;
-    delete clientConfig.partitions;
-    delete clientConfig.indexes;
-    delete clientConfig.pkName;
-    delete clientConfig.skName;
+    const {
+      tableName,
+      pkName,
+      skName,
+      pkPrefix,
+      partitions,
+      indexes,
+      ...clientConfig
+    } = config;
 
     this.client = new DynamoDBClient(clientConfig);
     this.docClient = DynamoDBDocumentClient.from(this.client, {
@@ -62,23 +63,23 @@ export class DynoQuery {
         removeUndefinedValues: true,
       }
     });
-    this.defaultTableName = config.tableName;
-    this.globalPkPrefix = config.pkPrefix || "";
-    this.pkName = config.pkName || "PK";
-    this.skName = config.skName || "SK";
+    this.defaultTableName = tableName;
+    this.globalPkPrefix = pkPrefix || "";
+    this.pkName = pkName || "PK";
+    this.skName = skName || "SK";
 
-    if (config.partitions) {
-      this.registeredPartitions = config.partitions;
-      Object.entries(config.partitions).forEach(([name, def]) => {
+    if (partitions) {
+      this.registeredPartitions = partitions;
+      Object.entries(partitions).forEach(([name, def]) => {
         this[name] = (id: string) => {
           return new Partition(this, { pkPrefix: this.globalPkPrefix + def.pkPrefix }, id);
         };
       });
     }
 
-    if (config.indexes) {
+    if (indexes) {
       const { IndexQuery } = require("./index-query");
-      Object.entries(config.indexes).forEach(([name, def]) => {
+      Object.entries(indexes).forEach(([name, def]) => {
         this[name] = (id: string) => {
           return new IndexQuery(this, { 
             indexName: def.indexName,
