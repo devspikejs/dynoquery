@@ -26,11 +26,11 @@ describe("IndexQuery pkPrefix", () => {
       tableName: "TestTable",
       pkPrefix: "GLOBAL#",
       indexes: {
-        ByCategory: { 
-            indexName: "GSI1", 
-            pkName: "GSI1PK", 
+        ByCategory: {
+            indexName: "GSI1",
+            pkName: "GSI1PK",
             skName: "GSI1SK",
-            pkPrefix: "CAT#" 
+            pkPrefix: "CAT#"
         }
       }
     });
@@ -42,7 +42,7 @@ describe("IndexQuery pkPrefix", () => {
     mockSend.mockResolvedValueOnce({ Items: [] });
 
     const index = (db as any).ByCategory("1");
-    await index.query();
+    await index.get();
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -61,19 +61,19 @@ describe("IndexQuery pkPrefix", () => {
         tableName: "TestTable",
         pkPrefix: "GLOBAL#",
         indexes: {
-          ByCategory: { 
-              indexName: "GSI1", 
-              pkName: "GSI1PK", 
+          ByCategory: {
+              indexName: "GSI1",
+              pkName: "GSI1PK",
               skName: "GSI1SK"
           }
         }
     });
-    const mockDocClient2 = (DynamoDBDocumentClient.from as jest.Mock).mock.results[0].value;
+    const mockDocClient2 = (DynamoDBDocumentClient.from as jest.Mock).mock.results[(DynamoDBDocumentClient.from as jest.Mock).mock.results.length - 1].value;
     const mockSend2 = mockDocClient2.send;
     mockSend2.mockResolvedValueOnce({ Items: [] });
 
     const index2 = (db2 as any).ByCategory("1");
-    await index2.query();
+    await index2.get();
 
     expect(mockSend2).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -89,20 +89,20 @@ describe("IndexQuery pkPrefix", () => {
         region: "us-east-1",
         tableName: "TestTable",
         indexes: {
-          ByCategory: { 
-              indexName: "GSI1", 
-              pkName: "GSI1PK", 
+          ByCategory: {
+              indexName: "GSI1",
+              pkName: "GSI1PK",
               skName: "GSI1SK",
               pkPrefix: "CAT#"
           }
         }
     });
-    const mockDocClient3 = (DynamoDBDocumentClient.from as jest.Mock).mock.results[0].value;
+    const mockDocClient3 = (DynamoDBDocumentClient.from as jest.Mock).mock.results[(DynamoDBDocumentClient.from as jest.Mock).mock.results.length - 1].value;
     const mockSend3 = mockDocClient3.send;
     mockSend3.mockResolvedValueOnce({ Items: [] });
 
     const index3 = (db3 as any).ByCategory("1");
-    await index3.query();
+    await index3.get();
 
     expect(mockSend3).toHaveBeenCalledWith(
         expect.objectContaining({

@@ -88,6 +88,48 @@ async function example() {
 }
 ```
 
+### Batch Operations
+
+If you have a `tableName` configured in `DynoQuery`, you can use the `Items` property in `batchGet` and `batchWrite` to automatically target that table.
+
+You can also generate items for `batchGet` using the `batchGetInput` method from partitions and indexes:
+
+```typescript
+const john = db.User('john@example.com');
+const jack = db.User('jack@example.com');
+const cat = db.ByCategory('1');
+
+const batchItem1 = john.batchGetInput('METADATA');
+const batchOthers = cat.batchGetInput('METADATA', 'DATA', 'PROFILE');
+const batchCat = cat.batchGetInput(); // No sk defined, so will get partition key only
+
+await db.batchGet(batchItem1, batchOthers, batchCat);
+```
+
+```typescript
+// batchGet with explicit Items
+await db.batchGet({
+  Items: [
+    { PK: 'USER#1', SK: 'METADATA' },
+    { PK: 'USER#2', SK: 'METADATA' }
+  ]
+});
+
+// batchWrite with simplified Items (automatically wrapped in PutRequest)
+await db.batchWrite({
+  Items: [
+    { PK: 'USER#3', SK: 'METADATA', name: 'Alice' },
+    {
+      DeleteRequest: {
+        Key: { PK: 'USER#1', SK: 'SESSION#123' }
+      }
+    }
+  ]
+});
+```
+
+You can still use the standard AWS SDK `RequestItems` if you need to target multiple tables or if you prefer the original syntax.
+
 ## API Reference
 
 ### DynoQuery
@@ -114,12 +156,18 @@ A way to manage models and data within a specific partition.
 - `getAll()`: Fetches all items in the partition and caches them. Returns the items.
 - `create(sk, data)`: Creates an item in the partition and returns its `Model`.
 - `model(sk)`: Get a `Model` instance for a specific sort key.
+- `batchGetInput(...sks)`: Generates items for batch query.
+- `batchWriteInput(...items)`: Generates items for batch write.
+- `batchDeleteInput(...sks)`: Generates items for batch delete.
 - `deleteAll()`: Deletes all items in the partition.
 
 ### IndexQuery
 A way to query Global Secondary Indexes.
 - `get(skValue | options)`: Query items in the index. Supports `skValue` (string) for `begins_with` search, or an options object with `skValue`, `limit`, and `scanIndexForward`.
 - `getAll()`: Fetches all items in the index for the given partition key.
+- `batchGetInput(...sks)`: Generates items for batch query.
+- `batchWriteInput(...items)`: Generates items for batch write.
+- `batchDeleteInput(...sks)`: Generates items for batch delete.
 - Automatically identifies models in results using `__model` and provides `getPartition()` helper.
 
 ## License

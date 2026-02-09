@@ -36,6 +36,14 @@ export interface DynoQueryConfig {
   indexes?: Record<string, { indexName: string, pkName?: string, skName?: string, pkPrefix?: string }>;
 }
 
+export type BatchGetInput = BatchGetCommandInput & {
+  Items?: any[];
+};
+
+export type BatchWriteInput = BatchWriteCommandInput & {
+  Items?: any[];
+};
+
 export class DynoQuery {
   private client: DynamoDBClient;
   private docClient: DynamoDBDocumentClient;
@@ -81,7 +89,7 @@ export class DynoQuery {
       const { IndexQuery } = require("./index-query");
       Object.entries(indexes).forEach(([name, def]) => {
         this[name] = (id: string) => {
-          return new IndexQuery(this, { 
+          return new IndexQuery(this, {
             indexName: def.indexName,
             pkName: def.pkName,
             skName: def.skName,
@@ -162,22 +170,77 @@ export class DynoQuery {
   /**
    * Get multiple items by their primary keys.
    */
-  async batchGet(params: BatchGetCommandInput) {
-    if (this.defaultTableName && params.RequestItems) {
-      // Note: Batch operations are a bit trickier because TableName is a key in RequestItems
-      // This wrapper doesn't automatically add it to RequestItems yet,
-      // but let's see if we should handle it.
-      // For now, let's keep it as is or add it if RequestItems is empty?
-      // Usually BatchGetCommandInput is complex.
+  async batchGet(params: BatchGetInput | any, ...additionalItems: any[][]) {
+    let finalParams: BatchGetInput;
+
+    if (params && !params.RequestItems && !params.Items && (Array.isArray(params) || additionalItems.length > 0)) {
+      // Handle the case where arguments are multiple arrays of items
+      const allItems = Array.isArray(params) ? [...params] : [];
+      additionalItems.forEach(chunk => {
+        if (Array.isArray(chunk)) {
+          allItems.push(...chunk);
+        } else {
+          allItems.push(chunk);
+        }
+      });
+
+      finalParams = {
+        Items: allItems
+      } as any;
+    } else {
+      finalParams = params;
     }
-    const command = new BatchGetCommand(params);
+
+    if (!finalParams.RequestItems && finalParams.Items) {
+      finalParams.RequestItems = {};
+      
+      finalParams.Items.forEach((item: any) => {
+        const tableName = item.TableName || this.defaultTableName;
+        if (!tableName) {
+          throw new Error("TableName must be provided for batch operations if no default tableName is set");
+        }
+
+        if (!finalParams.RequestItems![tableName]) {
+          finalParams.RequestItems![tableName] = { Keys: [] };
+        }
+
+        const key = item.Key || item;
+        finalParams.RequestItems![tableName].Keys!.push(key);
+      });
+
+      delete finalParams.Items;
+    } else if (!finalParams.RequestItems && this.defaultTableName) {
+      finalParams.RequestItems = {};
+    }
+    const command = new BatchGetCommand(finalParams);
     return await this.docClient.send(command);
   }
 
   /**
    * Put or delete multiple items in one or more tables.
    */
-  async batchWrite(params: BatchWriteCommandInput) {
+  async batchWrite(params: BatchWriteInput) {
+    if (!params.RequestItems && params.Items) {
+      params.RequestItems = {};
+      
+      params.Items.forEach((item: any) => {
+        const tableName = item.TableName || this.defaultTableName;
+        if (!tableName) {
+          throw new Error("TableName must be provided for batch operations if no default tableName is set");
+        }
+
+        if (!params.RequestItems![tableName]) {
+          params.RequestItems![tableName] = [];
+        }
+
+        const request = item.PutRequest || item.DeleteRequest ? item : { PutRequest: { Item: item } };
+        params.RequestItems![tableName].push(request);
+      });
+
+      delete params.Items;
+    } else if (!params.RequestItems && this.defaultTableName) {
+      params.RequestItems = {};
+    }
     const command = new BatchWriteCommand(params);
     return await this.docClient.send(command);
   }

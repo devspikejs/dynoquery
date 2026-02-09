@@ -110,6 +110,59 @@ export class Partition {
   }
 
   /**
+   * Generates items for batch query.
+   * If no SKs are provided, it might not be very useful for batchGet (which requires full keys),
+   * but the requirement says "will get all by pk" if no sk defined.
+   * Actually, BatchGetItem requires both PK and SK if the table has both.
+   * If it's for IndexQuery, it might be different.
+   */
+  batchGetInput(...sks: string[]): any[] {
+    if (sks.length === 0) {
+      return [{
+        TableName: this.tableName,
+        Key: { [this.pkName]: this.pk }
+      }];
+    }
+    return sks.map(sk => ({
+      TableName: this.tableName,
+      Key: {
+        [this.pkName]: this.pk,
+        [this.skName]: sk
+      }
+    }));
+  }
+
+  /**
+   * Generates items for batch write (put).
+   */
+  batchWriteInput(...items: any[]): any[] {
+    return items.map(item => ({
+      TableName: this.tableName,
+      PutRequest: {
+        Item: {
+          [this.pkName]: this.pk,
+          ...item
+        }
+      }
+    }));
+  }
+
+  /**
+   * Generates items for batch delete.
+   */
+  batchDeleteInput(...sks: string[]): any[] {
+    return sks.map(sk => ({
+      TableName: this.tableName,
+      DeleteRequest: {
+        Key: {
+          [this.pkName]: this.pk,
+          [this.skName]: sk
+        }
+      }
+    }));
+  }
+
+  /**
    * Create an item in this partition and return the model.
    */
   async create<T = any>(sk: string, data: T): Promise<Model<T>> {
