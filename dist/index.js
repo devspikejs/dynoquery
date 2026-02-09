@@ -64,6 +64,7 @@ class DynoQuery {
                         indexName: def.indexName,
                         pkName: def.pkName,
                         skName: def.skName,
+                        pkPrefix: def.pkPrefix,
                         pkValue: id
                     });
                 };

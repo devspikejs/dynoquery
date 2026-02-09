@@ -18,13 +18,26 @@ class IndexQuery {
         this.indexName = config.indexName;
         this.pkName = config.pkName || "GSI1PK";
         this.skName = config.skName || "GSI1SK";
-        this.pkValue = config.pkValue;
+        const globalPrefix = db.getPkPrefix();
+        const indexPrefix = config.pkPrefix || "";
+        let finalPrefix = indexPrefix;
+        if (globalPrefix && !indexPrefix.startsWith(globalPrefix)) {
+            finalPrefix = globalPrefix + indexPrefix;
+        }
+        this.pkValue = `${finalPrefix}${config.pkValue}`;
         if (!this.tableName) {
             throw new Error("TableName must be provided in IndexQueryConfig or DynoQueryConfig");
         }
     }
-    query() {
-        return __awaiter(this, arguments, void 0, function* (options = {}) {
+    get(skValueOrOptions) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let options = {};
+            if (typeof skValueOrOptions === 'string') {
+                options.skValue = skValueOrOptions;
+            }
+            else if (typeof skValueOrOptions === 'object') {
+                options = skValueOrOptions;
+            }
             let keyCondition = "#pk = :pk";
             const expressionAttributeNames = {
                 "#pk": this.pkName,
@@ -50,6 +63,11 @@ class IndexQuery {
             return items.map(item => this.mapItemToModel(item));
         });
     }
+    getAll() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.get();
+        });
+    }
     mapItemToModel(item) {
         const pkName = this.db.getPkName();
         const pkValue = item[pkName];
@@ -62,31 +80,17 @@ class IndexQuery {
             if (pkValue.startsWith(fullPrefix)) {
                 // Find the ID by removing the prefix
                 const id = pkValue.substring(fullPrefix.length);
-                // We can't easily return a "Model" or "Partition" instance here that is fully typed
-                // But the user asked: "identify the model and set the value as that model"
-                // In JS, we can't easily change the class of an object after the fact without some effort
-                // but we can return an instance of Partition if we want, or just the data.
-                // The requirement says: "if the pk value starts with the pkPrefix, we can identify the model and set the value as that model"
-                // Maybe it means returning a Partition instance? 
-                // Or maybe just adding a property to indicate the model type?
-                // Let's return a Partition instance and attach the data to its cache.
+                // Return a Partition instance and attach the data to its cache.
                 const partition = new partition_1.Partition(this.db, { pkPrefix: fullPrefix }, id);
-                // We can pre-fill the cache if we have the SK
+                // Pre-fill the cache if we have the SK
                 const skName = this.db.getSkName();
                 if (item[skName]) {
                     partition["cache"][item[skName]] = item;
                 }
-                // However, the user might just want the data.
-                // If we return a Partition, it's not the "data" itself.
-                // Let's check the requirement again.
-                // "identify the model and set the value as that model"
-                // If they want to use it like: results.forEach(user => user.get('METADATA'))
-                // Then returning Partition makes sense.
-                // But usually query returns data.
-                // Let's add a property __model to the item if it matches.
+                // Add a property __model to the item if it matches.
                 item.__model = name;
-                // Also provide a way to get the partition instance from the item?
-                item.getPartition = () => new partition_1.Partition(this.db, { pkPrefix: fullPrefix }, id);
+                // Also provide a way to get the partition instance from the item
+                item.getPartition = () => partition;
                 return item;
             }
         }

@@ -4,6 +4,7 @@ export interface IndexQueryConfig {
     indexName: string;
     pkName?: string;
     skName?: string;
+    pkPrefix?: string;
     pkValue: string;
 }
 export declare class IndexQuery {
@@ -14,10 +15,11 @@ export declare class IndexQuery {
     protected skName: string;
     protected pkValue: string;
     constructor(db: DynoQuery, config: IndexQueryConfig);
-    query<T = any>(options?: {
+    get<T = any>(skValueOrOptions?: string | {
         skValue?: string;
         limit?: number;
         scanIndexForward?: boolean;
     }): Promise<T[]>;
+    getAll<T = any>(): Promise<T[]>;
     private mapItemToModel;
 }

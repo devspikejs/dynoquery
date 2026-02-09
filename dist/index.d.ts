@@ -18,6 +18,7 @@ export interface DynoQueryConfig {
         indexName: string;
         pkName?: string;
         skName?: string;
+        pkPrefix?: string;
     }>;
 }
 export declare class DynoQuery {

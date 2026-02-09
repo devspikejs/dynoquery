@@ -22,8 +22,8 @@ export class IndexQuery {
     this.db = db;
     this.tableName = config.tableName || db.getTableName() || "";
     this.indexName = config.indexName;
-    this.pkName = config.pkName || "GSI1PK";
-    this.skName = config.skName || "GSI1SK";
+    this.pkName = config.pkName || (this.indexName + "PK");
+    this.skName = config.skName || (this.indexName + "SK");
 
     const globalPrefix = db.getPkPrefix();
     const indexPrefix = config.pkPrefix || "";
@@ -42,7 +42,7 @@ export class IndexQuery {
 
   async get<T = any>(skValueOrOptions?: string | { skValue?: string, limit?: number, scanIndexForward?: boolean }): Promise<T[]> {
     let options: { skValue?: string, limit?: number, scanIndexForward?: boolean } = {};
-    
+
     if (typeof skValueOrOptions === 'string') {
       options.skValue = skValueOrOptions;
     } else if (typeof skValueOrOptions === 'object') {
@@ -95,10 +95,10 @@ export class IndexQuery {
       if (pkValue.startsWith(fullPrefix)) {
         // Find the ID by removing the prefix
         const id = pkValue.substring(fullPrefix.length);
-        
+
         // Return a Partition instance and attach the data to its cache.
         const partition = new Partition(this.db, { pkPrefix: fullPrefix }, id);
-        
+
         // Pre-fill the cache if we have the SK
         const skName = this.db.getSkName();
         if (item[skName]) {

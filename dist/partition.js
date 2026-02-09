@@ -52,9 +52,10 @@ class Partition {
         }
     }
     /**
-     * Load all data for this partition key.
+     * Fetches all items in the partition and caches them.
+     * Returns the data and caches it.
      */
-    loadAll() {
+    getAll() {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.db.query({
                 TableName: this.tableName,
@@ -66,15 +67,14 @@ class Partition {
                     ":pk": this.pk,
                 },
             });
-            if (response.Items) {
-                response.Items.forEach((item) => {
-                    if (item[this.skName]) {
-                        this.cache[item[this.skName]] = item;
-                    }
-                });
-            }
+            const items = (response.Items || []);
+            items.forEach((item) => {
+                if (item[this.skName]) {
+                    this.cache[item[this.skName]] = item;
+                }
+            });
             this.isLoaded = true;
-            return this;
+            return items;
         });
     }
     /**

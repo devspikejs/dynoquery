@@ -15,9 +15,10 @@ export declare class Partition {
     protected isLoaded: boolean;
     constructor(db: DynoQuery, config: PartitionConfig, id?: string);
     /**
-     * Load all data for this partition key.
+     * Fetches all items in the partition and caches them.
+     * Returns the data and caches it.
      */
-    loadAll(): Promise<this>;
+    getAll<T = any>(): Promise<T[]>;
     /**
      * Get a model instance for a specific SK within this partition.
      */

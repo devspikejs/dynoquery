@@ -34,7 +34,7 @@ const db = new DynoQuery({
     User: { pkPrefix: 'USER#' },
   },
   indexes: {
-    ByCategory: { indexName: 'GSI1', pkName: 'GSI1PK', skName: 'GSI1SK', pkPrefix: 'CAT#' }
+    ByCategory: { indexName: 'GSI1', pkPrefix: 'CAT#' } // pkName defaults to GSI1PK, skName defaults to GSI1SK
   }
 });
 
