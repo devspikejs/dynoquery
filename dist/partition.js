@@ -20,7 +20,7 @@ class Partition {
         this.pkName = db.getPkName();
         this.skName = db.getSkName();
         if (config.pk) {
-            this.pk = config.pk;
+            this.pkValue = config.pk;
         }
         else {
             const globalPrefix = db.getPkPrefix();
@@ -41,10 +41,10 @@ class Partition {
                 if (globalPrefix && !partitionPrefix.startsWith(globalPrefix)) {
                     finalPrefix = globalPrefix + partitionPrefix;
                 }
-                this.pk = `${finalPrefix}${id || ""}`;
+                this.pkValue = `${finalPrefix}${id || ""}`;
             }
             else {
-                throw new Error("Either pk or pkPrefix must be provided in PartitionConfig");
+                throw new Error("Either pkValue or pkPrefix must be provided in PartitionConfig");
             }
         }
         if (!this.tableName) {
@@ -64,7 +64,7 @@ class Partition {
                     "#pk": this.pkName,
                 },
                 ExpressionAttributeValues: {
-                    ":pk": this.pk,
+                    ":pk": this.pkValue,
                 },
             });
             const items = (response.Items || []);
@@ -83,7 +83,7 @@ class Partition {
     model(sk) {
         const config = {
             tableName: this.tableName,
-            pkPrefix: this.pk, // In this context, pk is fixed, so prefix is the full PK
+            pkPrefix: this.pkValue, // In this context, pkValue is fixed, so prefix is the full PK
             skValue: sk,
             onUpdate: (updatedSk, data) => {
                 if (data === null) {
@@ -96,8 +96,55 @@ class Partition {
         };
         return new model_1.Model(this.db, config);
     }
-    getPK() {
-        return this.pk;
+    getPkValue() {
+        return this.pkValue;
+    }
+    /**
+     * Generates items for batch query.
+     * If no SKs are provided, it might not be very useful for batchGet (which requires full keys),
+     * but the requirement says "will get all by pkValue" if no sk defined.
+     * Actually, BatchGetItem requires both PK and SK if the table has both.
+     * If it's for IndexQuery, it might be different.
+     */
+    batchGetInput(...sks) {
+        if (sks.length === 0) {
+            return [{
+                    TableName: this.tableName,
+                    Key: { [this.pkName]: this.pkValue }
+                }];
+        }
+        return sks.map(sk => ({
+            TableName: this.tableName,
+            Key: {
+                [this.pkName]: this.pkValue,
+                [this.skName]: sk
+            }
+        }));
+    }
+    /**
+     * Generates items for batch write (put).
+     */
+    batchWriteInput(...items) {
+        return items.map(item => ({
+            TableName: this.tableName,
+            PutRequest: {
+                Item: Object.assign({ [this.pkName]: this.pkValue }, item)
+            }
+        }));
+    }
+    /**
+     * Generates items for batch delete.
+     */
+    batchDeleteInput(...sks) {
+        return sks.map(sk => ({
+            TableName: this.tableName,
+            DeleteRequest: {
+                Key: {
+                    [this.pkName]: this.pkValue,
+                    [this.skName]: sk
+                }
+            }
+        }));
     }
     /**
      * Create an item in this partition and return the model.
@@ -142,7 +189,7 @@ class Partition {
                     "#pk": this.pkName,
                 },
                 ExpressionAttributeValues: {
-                    ":pk": this.pk,
+                    ":pk": this.pkValue,
                 },
             });
             if (response.Items && response.Items.length > 0) {

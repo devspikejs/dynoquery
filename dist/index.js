@@ -22,6 +22,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DynoQuery = void 0;
 const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
@@ -30,35 +41,28 @@ const partition_1 = require("./partition");
 class DynoQuery {
     constructor(config = {}) {
         this.registeredPartitions = {};
-        const clientConfig = Object.assign({}, config);
-        // Remove properties that are not part of DynamoDBClientConfig
-        delete clientConfig.tableName;
-        delete clientConfig.pkPrefix;
-        delete clientConfig.partitions;
-        delete clientConfig.indexes;
-        delete clientConfig.pkName;
-        delete clientConfig.skName;
+        const { tableName, pkName, skName, pkPrefix, partitions, indexes } = config, clientConfig = __rest(config, ["tableName", "pkName", "skName", "pkPrefix", "partitions", "indexes"]);
         this.client = new client_dynamodb_1.DynamoDBClient(clientConfig);
         this.docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(this.client, {
             marshallOptions: {
                 removeUndefinedValues: true,
             }
         });
-        this.defaultTableName = config.tableName;
-        this.globalPkPrefix = config.pkPrefix || "";
-        this.pkName = config.pkName || "PK";
-        this.skName = config.skName || "SK";
-        if (config.partitions) {
-            this.registeredPartitions = config.partitions;
-            Object.entries(config.partitions).forEach(([name, def]) => {
+        this.defaultTableName = tableName;
+        this.globalPkPrefix = pkPrefix || "";
+        this.pkName = pkName || "PK";
+        this.skName = skName || "SK";
+        if (partitions) {
+            this.registeredPartitions = partitions;
+            Object.entries(partitions).forEach(([name, def]) => {
                 this[name] = (id) => {
                     return new partition_1.Partition(this, { pkPrefix: this.globalPkPrefix + def.pkPrefix }, id);
                 };
             });
         }
-        if (config.indexes) {
+        if (indexes) {
             const { IndexQuery } = require("./index-query");
-            Object.entries(config.indexes).forEach(([name, def]) => {
+            Object.entries(indexes).forEach(([name, def]) => {
                 this[name] = (id) => {
                     return new IndexQuery(this, {
                         indexName: def.indexName,
@@ -146,16 +150,46 @@ class DynoQuery {
     /**
      * Get multiple items by their primary keys.
      */
-    batchGet(params) {
+    batchGet(params, ...additionalItems) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (this.defaultTableName && params.RequestItems) {
-                // Note: Batch operations are a bit trickier because TableName is a key in RequestItems
-                // This wrapper doesn't automatically add it to RequestItems yet,
-                // but let's see if we should handle it.
-                // For now, let's keep it as is or add it if RequestItems is empty?
-                // Usually BatchGetCommandInput is complex.
+            let finalParams;
+            if (params && !params.RequestItems && !params.Items && (Array.isArray(params) || additionalItems.length > 0)) {
+                // Handle the case where arguments are multiple arrays of items
+                const allItems = Array.isArray(params) ? [...params] : [];
+                additionalItems.forEach(chunk => {
+                    if (Array.isArray(chunk)) {
+                        allItems.push(...chunk);
+                    }
+                    else {
+                        allItems.push(chunk);
+                    }
+                });
+                finalParams = {
+                    Items: allItems
+                };
             }
-            const command = new lib_dynamodb_1.BatchGetCommand(params);
+            else {
+                finalParams = params;
+            }
+            if (!finalParams.RequestItems && finalParams.Items) {
+                finalParams.RequestItems = {};
+                finalParams.Items.forEach((item) => {
+                    const tableName = item.TableName || this.defaultTableName;
+                    if (!tableName) {
+                        throw new Error("TableName must be provided for batch operations if no default tableName is set");
+                    }
+                    if (!finalParams.RequestItems[tableName]) {
+                        finalParams.RequestItems[tableName] = { Keys: [] };
+                    }
+                    const key = item.Key || item;
+                    finalParams.RequestItems[tableName].Keys.push(key);
+                });
+                delete finalParams.Items;
+            }
+            else if (!finalParams.RequestItems && this.defaultTableName) {
+                finalParams.RequestItems = {};
+            }
+            const command = new lib_dynamodb_1.BatchGetCommand(finalParams);
             return yield this.docClient.send(command);
         });
     }
@@ -164,6 +198,24 @@ class DynoQuery {
      */
     batchWrite(params) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (!params.RequestItems && params.Items) {
+                params.RequestItems = {};
+                params.Items.forEach((item) => {
+                    const tableName = item.TableName || this.defaultTableName;
+                    if (!tableName) {
+                        throw new Error("TableName must be provided for batch operations if no default tableName is set");
+                    }
+                    if (!params.RequestItems[tableName]) {
+                        params.RequestItems[tableName] = [];
+                    }
+                    const request = item.PutRequest || item.DeleteRequest ? item : { PutRequest: { Item: item } };
+                    params.RequestItems[tableName].push(request);
+                });
+                delete params.Items;
+            }
+            else if (!params.RequestItems && this.defaultTableName) {
+                params.RequestItems = {};
+            }
             const command = new lib_dynamodb_1.BatchWriteCommand(params);
             return yield this.docClient.send(command);
         });

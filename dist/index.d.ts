@@ -21,6 +21,12 @@ export interface DynoQueryConfig {
         pkPrefix?: string;
     }>;
 }
+export type BatchGetInput = BatchGetCommandInput & {
+    Items?: any[];
+};
+export type BatchWriteInput = BatchWriteCommandInput & {
+    Items?: any[];
+};
 export declare class DynoQuery {
     private client;
     private docClient;
@@ -58,11 +64,11 @@ export declare class DynoQuery {
     /**
      * Get multiple items by their primary keys.
      */
-    batchGet(params: BatchGetCommandInput): Promise<import("@aws-sdk/lib-dynamodb").BatchGetCommandOutput>;
+    batchGet(params: BatchGetInput | any, ...additionalItems: any[][]): Promise<import("@aws-sdk/lib-dynamodb").BatchGetCommandOutput>;
     /**
      * Put or delete multiple items in one or more tables.
      */
-    batchWrite(params: BatchWriteCommandInput): Promise<import("@aws-sdk/lib-dynamodb").BatchWriteCommandOutput>;
+    batchWrite(params: BatchWriteInput): Promise<import("@aws-sdk/lib-dynamodb").BatchWriteCommandOutput>;
     getTableName(): string | undefined;
     getPkPrefix(): string;
     getPkName(): string;
