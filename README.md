@@ -31,9 +31,10 @@ const db = new DynoQuery({
   // optional endpoint for local development
   // endpoint: 'http://localhost:8000'
   partitions: {
-    User: { pkPrefix: 'USER#' },
+    User: { pkPrefix: 'USER#' }, // TENANT#A#USER#
   },
   indexes: {
+    //  TENANT#A#CAT#
     ByCategory: { indexName: 'GSI1', pkPrefix: 'CAT#' } // pkName defaults to GSI1PK, skName defaults to GSI1SK
   }
 });
@@ -68,6 +69,16 @@ async function example() {
   // Create an item through partition
   const profileModel = await john.create('PROFILE', { name: 'John Doe', email: 'john@example.com' });
   
+  // You can also use getPkValue() to get the generated PK for the partition or index
+  // This is useful when you need to store it in another attribute (e.g., GSI)
+  const cat = db.ByCategory('USER');
+  const profileWithGSI = await john.create('PROFILE', { 
+    name: 'John Doe', 
+    email: 'john@example.com', 
+    GSI1PK: cat.getPkValue(), 
+    GSI1SK: 'john@example.com' 
+  });
+
   // Update the model (updates both DB and partition cache)
   await profileModel.update({ theme: 'dark' });
 
@@ -152,6 +163,7 @@ A model-based abstraction for a specific data type.
 
 ### Partition
 A way to manage models and data within a specific partition.
+- `getPkValue()`: Returns the generated partition key value.
 - `get(sk)`: Fetches data for a specific sort key (returns a Promise).
 - `getAll()`: Fetches all items in the partition and caches them. Returns the items.
 - `create(sk, data)`: Creates an item in the partition and returns its `Model`.
@@ -163,6 +175,7 @@ A way to manage models and data within a specific partition.
 
 ### IndexQuery
 A way to query Global Secondary Indexes.
+- `getPkValue()`: Returns the generated partition key value for this index.
 - `get(skValue | options)`: Query items in the index. Supports `skValue` (string) for `begins_with` search, or an options object with `skValue`, `limit`, and `scanIndexForward`.
 - `getAll()`: Fetches all items in the index for the given partition key.
 - `batchGetInput(...sks)`: Generates items for batch query.

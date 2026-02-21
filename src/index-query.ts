@@ -81,6 +81,10 @@ export class IndexQuery {
     return this.get<T>();
   }
 
+  getPkValue(): string {
+    return this.pkValue;
+  }
+
   /**
    * Generates items for batch query.
    */

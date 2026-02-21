@@ -67,7 +67,7 @@ describe("IndexQuery", () => {
 
     // Test getPartition helper
     const userPartition = results[0].getPartition();
-    expect(userPartition.getPK()).toBe("USER#john");
+    expect(userPartition.getPkValue()).toBe("USER#john");
 
     // Verify that the partition is already cached with the item data
     // This should not trigger another DB call

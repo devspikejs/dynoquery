@@ -10,7 +10,7 @@ export interface PartitionConfig {
 export class Partition {
   protected db: DynoQuery;
   protected tableName?: string;
-  protected pk: string;
+  protected pkValue: string;
   protected pkName: string;
   protected skName: string;
   protected cache: Record<string, any> = {};
@@ -23,7 +23,7 @@ export class Partition {
     this.skName = db.getSkName();
 
     if (config.pk) {
-      this.pk = config.pk;
+      this.pkValue = config.pk;
     } else {
       const globalPrefix = db.getPkPrefix();
       const partitionPrefix = config.pkPrefix || "";
@@ -49,9 +49,9 @@ export class Partition {
              finalPrefix = globalPrefix + partitionPrefix;
         }
 
-        this.pk = `${finalPrefix}${id || ""}`;
+        this.pkValue = `${finalPrefix}${id || ""}`;
       } else {
-        throw new Error("Either pk or pkPrefix must be provided in PartitionConfig");
+        throw new Error("Either pkValue or pkPrefix must be provided in PartitionConfig");
       }
     }
 
@@ -72,7 +72,7 @@ export class Partition {
         "#pk": this.pkName,
       },
       ExpressionAttributeValues: {
-        ":pk": this.pk,
+        ":pk": this.pkValue,
       },
     });
 
@@ -92,7 +92,7 @@ export class Partition {
   model<T = any>(sk: string): Model<T> {
     const config: ModelConfig<T> = {
       tableName: this.tableName,
-      pkPrefix: this.pk, // In this context, pk is fixed, so prefix is the full PK
+      pkPrefix: this.pkValue, // In this context, pkValue is fixed, so prefix is the full PK
       skValue: sk,
       onUpdate: (updatedSk: any, data: any) => {
         if (data === null) {
@@ -105,14 +105,14 @@ export class Partition {
     return new Model<T>(this.db, config);
   }
 
-  getPK(): string {
-    return this.pk;
+  getPkValue(): string {
+    return this.pkValue;
   }
 
   /**
    * Generates items for batch query.
    * If no SKs are provided, it might not be very useful for batchGet (which requires full keys),
-   * but the requirement says "will get all by pk" if no sk defined.
+   * but the requirement says "will get all by pkValue" if no sk defined.
    * Actually, BatchGetItem requires both PK and SK if the table has both.
    * If it's for IndexQuery, it might be different.
    */
@@ -120,13 +120,13 @@ export class Partition {
     if (sks.length === 0) {
       return [{
         TableName: this.tableName,
-        Key: { [this.pkName]: this.pk }
+        Key: { [this.pkName]: this.pkValue }
       }];
     }
     return sks.map(sk => ({
       TableName: this.tableName,
       Key: {
-        [this.pkName]: this.pk,
+        [this.pkName]: this.pkValue,
         [this.skName]: sk
       }
     }));
@@ -140,7 +140,7 @@ export class Partition {
       TableName: this.tableName,
       PutRequest: {
         Item: {
-          [this.pkName]: this.pk,
+          [this.pkName]: this.pkValue,
           ...item
         }
       }
@@ -155,7 +155,7 @@ export class Partition {
       TableName: this.tableName,
       DeleteRequest: {
         Key: {
-          [this.pkName]: this.pk,
+          [this.pkName]: this.pkValue,
           [this.skName]: sk
         }
       }
@@ -204,7 +204,7 @@ export class Partition {
         "#pk": this.pkName,
       },
       ExpressionAttributeValues: {
-        ":pk": this.pk,
+        ":pk": this.pkValue,
       },
     });
 
