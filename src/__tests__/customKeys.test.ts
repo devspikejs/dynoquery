@@ -106,25 +106,18 @@ describe("Custom Key Names Support", () => {
           { partition_key: "USER#john@example.com", sort_key: "METADATA" }
         ]
       })
-      .mockResolvedValueOnce({}); // batchWrite
+      .mockResolvedValueOnce({}); // delete
 
     await john.deleteAll();
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.objectContaining({
-          RequestItems: expect.objectContaining({
-            "CustomTable": expect.arrayContaining([
-              expect.objectContaining({
-                DeleteRequest: {
-                  Key: {
-                    partition_key: "USER#john@example.com",
-                    sort_key: "METADATA"
-                  }
-                }
-              })
-            ])
-          })
+          TableName: "CustomTable",
+          Key: {
+            partition_key: "USER#john@example.com",
+            sort_key: "METADATA"
+          }
         })
       })
     );

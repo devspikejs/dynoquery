@@ -143,10 +143,12 @@ describe("Partition", () => {
     ];
 
     // 1. Query call to find items
-    // 2. batchWrite call to delete items
+    // 2. delete call for METADATA
+    // 3. delete call for PROFILE
     mockSend
-      .mockResolvedValueOnce({ Items: mockItems }) // get
-      .mockResolvedValueOnce({}); // batchWrite
+      .mockResolvedValueOnce({ Items: mockItems }) // query
+      .mockResolvedValueOnce({}) // delete 1
+      .mockResolvedValueOnce({}); // delete 2
 
     // Pre-populate cache to verify it's cleared
     userPartition["cache"]["METADATA"] = mockItems[0];
@@ -154,7 +156,7 @@ describe("Partition", () => {
 
     await userPartition.deleteAll();
 
-    // Verify get was called
+    // Verify query was called
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.objectContaining({
@@ -166,19 +168,20 @@ describe("Partition", () => {
       })
     );
 
-    // Verify batchWrite was called
+    // Verify delete was called for each item
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.objectContaining({
-          RequestItems: expect.objectContaining({
-            "AppTable": expect.arrayContaining([
-              expect.objectContaining({
-                DeleteRequest: expect.objectContaining({
-                  Key: { PK: "USER#john@example.com", SK: "METADATA" }
-                })
-              })
-            ])
-          })
+          TableName: "AppTable",
+          Key: { PK: "USER#john@example.com", SK: "METADATA" }
+        }),
+      })
+    );
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          TableName: "AppTable",
+          Key: { PK: "USER#john@example.com", SK: "PROFILE" }
         }),
       })
     );

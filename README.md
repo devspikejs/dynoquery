@@ -13,7 +13,6 @@ npm install dynoquery
 - Basic CRUD operations (create, get, update, delete)
 - Optimized for **Single-Table Design**
 - Query and Scan support
-- Batch operations (batchGet, batchWrite)
 - TypeScript support
 
 ## Usage
@@ -97,48 +96,6 @@ async function example() {
 }
 ```
 
-### Batch Operations
-
-If you have a `tableName` configured in `DynoQuery`, you can use the `Items` property in `batchGet` and `batchWrite` to automatically target that table.
-
-You can also generate items for `batchGet` using the `batchGetInput` method from partitions and indexes:
-
-```typescript
-const john = db.User('john@example.com');
-const jack = db.User('jack@example.com');
-const cat = db.ByCategory('1');
-
-const batchItem1 = john.batchGetInput('METADATA');
-const batchOthers = cat.batchGetInput('METADATA', 'DATA', 'PROFILE');
-const batchCat = cat.batchGetInput(); // No sk defined, so will get partition key only
-
-await db.batchGet(batchItem1, batchOthers, batchCat);
-```
-
-```typescript
-// batchGet with explicit Items
-await db.batchGet({
-  Items: [
-    { PK: 'USER#1', SK: 'METADATA' },
-    { PK: 'USER#2', SK: 'METADATA' }
-  ]
-});
-
-// batchWrite with simplified Items (automatically wrapped in PutRequest)
-await db.batchWrite({
-  Items: [
-    { PK: 'USER#3', SK: 'METADATA', name: 'Alice' },
-    {
-      DeleteRequest: {
-        Key: { PK: 'USER#1', SK: 'SESSION#123' }
-      }
-    }
-  ]
-});
-```
-
-You can still use the standard AWS SDK `RequestItems` if you need to target multiple tables or if you prefer the original syntax.
-
 ## API Reference
 
 ### DynoQuery
@@ -149,8 +106,6 @@ The main client for interacting with DynamoDB.
 - `delete(params)`: Delete an item.
 - `query(params)`: Query items.
 - `scan(params)`: Scan items.
-- `batchGet(params)`: Batch get items.
-- `batchWrite(params)`: Batch write items.
 
 ### Partition
 A way to manage data within a specific partition.
@@ -160,9 +115,6 @@ A way to manage data within a specific partition.
 - `create(sk, data)`: Creates an item in the partition.
 - `update(sk, data)`: Updates an existing item (partial update).
 - `delete(sk)`: Deletes an item.
-- `batchGetInput(...sks)`: Generates items for batch query.
-- `batchWriteInput(...items)`: Generates items for batch write.
-- `batchDeleteInput(...sks)`: Generates items for batch delete.
 - `deleteAll()`: Deletes all items in the partition.
 
 ### IndexQuery
@@ -170,9 +122,6 @@ A way to query Global Secondary Indexes.
 - `getPkValue()`: Returns the generated partition key value for this index.
 - `get(skValue | options)`: Query items in the index. Supports `skValue` (string) for `begins_with` search, or an options object with `skValue`, `limit`, and `scanIndexForward`.
 - `getAll()`: Fetches all items in the index for the given partition key.
-- `batchGetInput(...sks)`: Generates items for batch query.
-- `batchWriteInput(...items)`: Generates items for batch write.
-- `batchDeleteInput(...sks)`: Generates items for batch delete.
 - Automatically identifies the model name in results using `__model` (based on registered models) and provides `getPartition()` helper.
 
 ## License

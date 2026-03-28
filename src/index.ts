@@ -7,16 +7,12 @@ import {
   DeleteCommand,
   QueryCommand,
   ScanCommand,
-  BatchGetCommand,
-  BatchWriteCommand,
   PutCommandInput,
   GetCommandInput,
   UpdateCommandInput,
   DeleteCommandInput,
   QueryCommandInput,
   ScanCommandInput,
-  BatchGetCommandInput,
-  BatchWriteCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import { Partition } from "./partition";
 
@@ -35,14 +31,6 @@ export interface DynoQueryConfig {
   models?: Record<string, { pkPrefix: string }>;
   indexes?: Record<string, { indexName: string, pkName?: string, skName?: string, pkPrefix?: string }>;
 }
-
-export type BatchGetInput = BatchGetCommandInput & {
-  Items?: any[];
-};
-
-export type BatchWriteInput = BatchWriteCommandInput & {
-  Items?: any[];
-};
 
 export class DynoQuery {
   private client: DynamoDBClient;
@@ -164,84 +152,6 @@ export class DynoQuery {
       params.TableName = this.defaultTableName;
     }
     const command = new ScanCommand(params);
-    return await this.docClient.send(command);
-  }
-
-  /**
-   * Get multiple items by their primary keys.
-   */
-  async batchGet(params: BatchGetInput | any, ...additionalItems: any[][]) {
-    let finalParams: BatchGetInput;
-
-    if (params && !params.RequestItems && !params.Items && (Array.isArray(params) || additionalItems.length > 0)) {
-      // Handle the case where arguments are multiple arrays of items
-      const allItems = Array.isArray(params) ? [...params] : [];
-      additionalItems.forEach(chunk => {
-        if (Array.isArray(chunk)) {
-          allItems.push(...chunk);
-        } else {
-          allItems.push(chunk);
-        }
-      });
-
-      finalParams = {
-        Items: allItems
-      } as any;
-    } else {
-      finalParams = params;
-    }
-
-    if (!finalParams.RequestItems && finalParams.Items) {
-      finalParams.RequestItems = {};
-
-      finalParams.Items.forEach((item: any) => {
-        const tableName = item.TableName || this.defaultTableName;
-        if (!tableName) {
-          throw new Error("TableName must be provided for batch operations if no default tableName is set");
-        }
-
-        if (!finalParams.RequestItems![tableName]) {
-          finalParams.RequestItems![tableName] = { Keys: [] };
-        }
-
-        const key = item.Key || item;
-        finalParams.RequestItems![tableName].Keys!.push(key);
-      });
-
-      delete finalParams.Items;
-    } else if (!finalParams.RequestItems && this.defaultTableName) {
-      finalParams.RequestItems = {};
-    }
-    const command = new BatchGetCommand(finalParams);
-    return await this.docClient.send(command);
-  }
-
-  /**
-   * Put or delete multiple items in one or more tables.
-   */
-  async batchWrite(params: BatchWriteInput) {
-    if (!params.RequestItems && params.Items) {
-      params.RequestItems = {};
-
-      params.Items.forEach((item: any) => {
-        const tableName = item.TableName || this.defaultTableName;
-        if (!tableName) {
-          throw new Error("TableName must be provided for batch operations if no default tableName is set");
-        }
-
-        if (!params.RequestItems![tableName]) {
-          params.RequestItems![tableName] = [];
-        }
-
-        const request = item.PutRequest || item.DeleteRequest ? item : { PutRequest: { Item: item } };
-        params.RequestItems![tableName].push(request);
-      });
-
-      delete params.Items;
-    } else if (!params.RequestItems && this.defaultTableName) {
-      params.RequestItems = {};
-    }
-    const command = new BatchWriteCommand(params);
     return await this.docClient.send(command);
   }
 

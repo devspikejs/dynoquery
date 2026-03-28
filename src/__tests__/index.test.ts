@@ -88,29 +88,4 @@ describe('DynoQuery', () => {
     await dynoQuery.scan(params);
     expect(mockDocClient.send).toHaveBeenCalled();
   });
-
-  test('batchGet should call BatchGetCommand', async () => {
-    const params = {
-      RequestItems: {
-        TestTable: {
-          Keys: [{ id: '1' }, { id: '2' }],
-        },
-      },
-    };
-    await dynoQuery.batchGet(params);
-    expect(mockDocClient.send).toHaveBeenCalled();
-  });
-
-  test('batchWrite should call BatchWriteCommand', async () => {
-    const params = {
-      RequestItems: {
-        TestTable: [
-          { PutRequest: { Item: { id: '1', name: 'Test1' } } },
-          { PutRequest: { Item: { id: '2', name: 'Test2' } } },
-        ],
-      },
-    };
-    await dynoQuery.batchWrite(params);
-    expect(mockDocClient.send).toHaveBeenCalled();
-  });
 });
