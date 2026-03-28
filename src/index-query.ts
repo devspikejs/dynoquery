@@ -8,6 +8,7 @@ export interface IndexQueryConfig {
   skName?: string;
   pkPrefix?: string;
   pkValue: string;
+  skValue?: string;
 }
 
 export class IndexQuery {
@@ -17,6 +18,7 @@ export class IndexQuery {
   protected pkName: string;
   protected skName: string;
   protected pkValue: string;
+  protected skValue?: string;
 
   constructor(db: DynoQuery, config: IndexQueryConfig) {
     this.db = db;
@@ -24,6 +26,7 @@ export class IndexQuery {
     this.indexName = config.indexName;
     this.pkName = config.pkName || (this.indexName + "PK");
     this.skName = config.skName || (this.indexName + "SK");
+    this.skValue = config.skValue;
 
     const globalPrefix = db.getPkPrefix();
     const indexPrefix = config.pkPrefix || "";
@@ -47,6 +50,8 @@ export class IndexQuery {
       options.skValue = skValueOrOptions;
     } else if (typeof skValueOrOptions === 'object') {
       options = skValueOrOptions;
+    } else if (this.skValue) {
+      options.skValue = this.skValue;
     }
 
     let keyCondition = "#pk = :pk";
@@ -83,6 +88,10 @@ export class IndexQuery {
 
   getPkValue(): string {
     return this.pkValue;
+  }
+
+  getSkValue(): string | undefined {
+    return this.skValue;
   }
 
   private mapItemToModel(item: any): any {

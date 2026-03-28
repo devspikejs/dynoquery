@@ -68,12 +68,13 @@ async function example() {
   await john.create('PROFILE', { name: 'John Doe', email: 'john@example.com' });
   
   // Resulting GSI1PK: TENANT#A#CAT#USER
-  const cat = db.findByCategory('USER');
+  const cat = db.findByCategory('USER', '1');
+  console.log(cat.getSkValue()); // '1'
   await john.create('PROFILE', { 
     name: 'John Doe', 
     email: 'john@example.com', 
     GSI1PK: cat.getPkValue(), 
-    GSI1SK: 'john@example.com' 
+    GSI1SK: cat.getSkValue() 
   });
 
   // Update the item (updates both DB and partition cache)
@@ -119,8 +120,9 @@ A way to manage data within a specific partition.
 ### IndexQuery
 A way to query Global Secondary Indexes.
 - `getPkValue()`: Returns the generated partition key value for this index.
-- `get(skValue | options)`: Query items in the index. Supports `skValue` (string) for `begins_with` search, or an options object with `skValue`, `limit`, and `scanIndexForward`.
-- `getAll()`: Fetches all items in the index for the given partition key.
+- `getSkValue()`: Returns the sort key value if it was provided when calling the index query method.
+- `get(skValue | options)`: Query items in the index. Supports `skValue` (string) for `begins_with` search, or an options object with `skValue`, `limit`, and `scanIndexForward`. If `skValue` was provided when the `IndexQuery` was created, it will be used as the default if no `skValue` is passed here.
+- `getAll()`: Fetches all items in the index for the given partition key. If `skValue` was provided when the `IndexQuery` was created, it will filter by it using `begins_with`.
 - Automatically identifies the model name in results using `__model` (based on registered models) and provides `getPartition()` helper.
 
 ## License
