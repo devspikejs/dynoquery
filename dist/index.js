@@ -40,8 +40,8 @@ const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
 const partition_1 = require("./partition");
 class DynoQuery {
     constructor(config = {}) {
-        this.registeredPartitions = {};
-        const { tableName, pkName, skName, pkPrefix, partitions, indexes } = config, clientConfig = __rest(config, ["tableName", "pkName", "skName", "pkPrefix", "partitions", "indexes"]);
+        this.registeredModels = {};
+        const { tableName, pkName, skName, pkPrefix, models, indexes } = config, clientConfig = __rest(config, ["tableName", "pkName", "skName", "pkPrefix", "models", "indexes"]);
         this.client = new client_dynamodb_1.DynamoDBClient(clientConfig);
         this.docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(this.client, {
             marshallOptions: {
@@ -52,9 +52,9 @@ class DynoQuery {
         this.globalPkPrefix = pkPrefix || "";
         this.pkName = pkName || "PK";
         this.skName = skName || "SK";
-        if (partitions) {
-            this.registeredPartitions = partitions;
-            Object.entries(partitions).forEach(([name, def]) => {
+        if (models) {
+            this.registeredModels = models;
+            Object.entries(models).forEach(([name, def]) => {
                 this[name] = (id) => {
                     return new partition_1.Partition(this, { pkPrefix: this.globalPkPrefix + def.pkPrefix }, id);
                 };
@@ -232,8 +232,8 @@ class DynoQuery {
     getSkName() {
         return this.skName;
     }
-    getRegisteredPartitions() {
-        return this.registeredPartitions;
+    getRegisteredModels() {
+        return this.registeredModels;
     }
 }
 exports.DynoQuery = DynoQuery;
