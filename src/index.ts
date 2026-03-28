@@ -29,7 +29,7 @@ export interface DynoQueryConfig {
     sessionToken?: string;
   };
   models?: Record<string, { pkPrefix: string }>;
-  indexes?: Record<string, { indexName: string, pkName?: string, skName?: string, pkPrefix?: string }>;
+  findBy?: Record<string, { indexName: string, pkName?: string, skName?: string, pkPrefix?: string }>;
 }
 
 export class DynoQuery {
@@ -49,7 +49,7 @@ export class DynoQuery {
       skName,
       pkPrefix,
       models,
-      indexes,
+      findBy,
       ...clientConfig
     } = config;
 
@@ -73,10 +73,11 @@ export class DynoQuery {
       });
     }
 
-    if (indexes) {
+    if (findBy) {
       const { IndexQuery } = require("./index-query");
-      Object.entries(indexes).forEach(([name, def]) => {
-        this[name] = (id: string) => {
+      Object.entries(findBy).forEach(([name, def]) => {
+        const methodName = `findBy${name}`;
+        this[methodName] = (id: string) => {
           return new IndexQuery(this, {
             indexName: def.indexName,
             pkName: def.pkName,

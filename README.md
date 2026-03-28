@@ -31,9 +31,9 @@ const db = new DynoQuery({
   models: {
     User: { pkPrefix: 'USER#' }, // TENANT#A#USER#
   },
-  indexes: {
+  findBy: {
     //  TENANT#A#CAT#
-    ByCategory: { indexName: 'GSI1', pkPrefix: 'CAT#' } // pkName defaults to GSI1PK, skName defaults to GSI1SK
+    Category: { indexName: 'GSI1', pkPrefix: 'CAT#' } // pkName defaults to GSI1PK, skName defaults to GSI1SK
   }
 });
 
@@ -44,7 +44,7 @@ async function example() {
   
   // Use registered index
   // Resulting GSI1PK: TENANT#A#CAT#1
-  const categories = db.ByCategory('1');
+  const categories = db.findByCategory('1');
   const items = await categories.get('100');
   const allItems = await categories.getAll();
   
@@ -67,9 +67,8 @@ async function example() {
   // Create an item through partition
   await john.create('PROFILE', { name: 'John Doe', email: 'john@example.com' });
   
-  // You can also use getPkValue() to get the generated PK for the partition or index
-  // This is useful when you need to store it in another attribute (e.g., GSI)
-  const cat = db.ByCategory('USER');
+  // Resulting GSI1PK: TENANT#A#CAT#USER
+  const cat = db.findByCategory('USER');
   await john.create('PROFILE', { 
     name: 'John Doe', 
     email: 'john@example.com', 

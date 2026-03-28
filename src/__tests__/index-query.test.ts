@@ -28,8 +28,8 @@ describe("IndexQuery", () => {
         User: { pkPrefix: "USER#" },
         Product: { pkPrefix: "PROD#" }
       },
-      indexes: {
-        ByCategory: { indexName: "GSI1", pkName: "GSI1PK", skName: "GSI1SK" }
+      findBy: {
+        Category: { indexName: "GSI1", pkName: "GSI1PK", skName: "GSI1SK" }
       }
     });
     const mockDocClient = (DynamoDBDocumentClient.from as jest.Mock).mock.results[0].value;
@@ -44,8 +44,7 @@ describe("IndexQuery", () => {
     ];
 
     mockSend.mockResolvedValueOnce({ Items: mockItems });
-
-    const index = (db as any).ByCategory("CAT#1");
+    const index = (db as any).findByCategory("CAT#1");
     const results = await index.get();
 
     expect(mockSend).toHaveBeenCalledWith(
@@ -78,8 +77,7 @@ describe("IndexQuery", () => {
 
   it("should support begins_with on SK as a string", async () => {
     mockSend.mockResolvedValueOnce({ Items: [] });
-
-    const index = (db as any).ByCategory("CAT#1");
+    const index = (db as any).findByCategory("CAT#1");
     await index.get("1");
 
     expect(mockSend).toHaveBeenCalledWith(
@@ -101,8 +99,7 @@ describe("IndexQuery", () => {
 
   it("should support getAll", async () => {
     mockSend.mockResolvedValueOnce({ Items: [] });
-
-    const index = (db as any).ByCategory("CAT#1");
+    const index = (db as any).findByCategory("CAT#1");
     await index.getAll();
 
     expect(mockSend).toHaveBeenCalledWith(
@@ -118,8 +115,7 @@ describe("IndexQuery", () => {
 
   it("should support begins_with on SK in options object", async () => {
     mockSend.mockResolvedValueOnce({ Items: [] });
-
-    const index = (db as any).ByCategory("CAT#1");
+    const index = (db as any).findByCategory("CAT#1");
     await index.get({ skValue: "1" });
 
     expect(mockSend).toHaveBeenCalledWith(
