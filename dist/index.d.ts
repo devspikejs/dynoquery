@@ -1,4 +1,4 @@
-import { PutCommandInput, GetCommandInput, UpdateCommandInput, DeleteCommandInput, QueryCommandInput, ScanCommandInput, BatchGetCommandInput, BatchWriteCommandInput } from "@aws-sdk/lib-dynamodb";
+import { PutCommandInput, GetCommandInput, UpdateCommandInput, DeleteCommandInput, QueryCommandInput, ScanCommandInput } from "@aws-sdk/lib-dynamodb";
 export interface DynoQueryConfig {
     tableName?: string;
     pkName?: string;
@@ -21,12 +21,6 @@ export interface DynoQueryConfig {
         pkPrefix?: string;
     }>;
 }
-export type BatchGetInput = BatchGetCommandInput & {
-    Items?: any[];
-};
-export type BatchWriteInput = BatchWriteCommandInput & {
-    Items?: any[];
-};
 export declare class DynoQuery {
     private client;
     private docClient;
@@ -61,14 +55,6 @@ export declare class DynoQuery {
      * Scan the table or index for items.
      */
     scan(params: ScanCommandInput): Promise<import("@aws-sdk/lib-dynamodb").ScanCommandOutput>;
-    /**
-     * Get multiple items by their primary keys.
-     */
-    batchGet(params: BatchGetInput | any, ...additionalItems: any[][]): Promise<import("@aws-sdk/lib-dynamodb").BatchGetCommandOutput>;
-    /**
-     * Put or delete multiple items in one or more tables.
-     */
-    batchWrite(params: BatchWriteInput): Promise<import("@aws-sdk/lib-dynamodb").BatchWriteCommandOutput>;
     getTableName(): string | undefined;
     getPkPrefix(): string;
     getPkName(): string;

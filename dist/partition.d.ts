@@ -38,22 +38,6 @@ export declare class Partition {
     get<T = any>(sk: string): Promise<T | null>;
     getPkValue(): string;
     /**
-     * Generates items for batch query.
-     * If no SKs are provided, it might not be very useful for batchGet (which requires full keys),
-     * but the requirement says "will get all by pkValue" if no sk defined.
-     * Actually, BatchGetItem requires both PK and SK if the table has both.
-     * If it's for IndexQuery, it might be different.
-     */
-    batchGetInput(...sks: string[]): any[];
-    /**
-     * Generates items for batch write (put).
-     */
-    batchWriteInput(...items: any[]): any[];
-    /**
-     * Generates items for batch delete.
-     */
-    batchDeleteInput(...sks: string[]): any[];
-    /**
      * Delete all data in this partition.
      */
     deleteAll(): Promise<void>;

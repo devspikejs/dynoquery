@@ -22,17 +22,5 @@ export declare class IndexQuery {
     }): Promise<T[]>;
     getAll<T = any>(): Promise<T[]>;
     getPkValue(): string;
-    /**
-     * Generates items for batch query.
-     */
-    batchGetInput(...sks: string[]): any[];
-    /**
-     * Generates items for batch write (put).
-     */
-    batchWriteInput(...items: any[]): any[];
-    /**
-     * Generates items for batch delete.
-     */
-    batchDeleteInput(...sks: string[]): any[];
     private mapItemToModel;
 }

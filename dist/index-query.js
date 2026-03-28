@@ -71,49 +71,6 @@ class IndexQuery {
     getPkValue() {
         return this.pkValue;
     }
-    /**
-     * Generates items for batch query.
-     */
-    batchGetInput(...sks) {
-        if (sks.length === 0) {
-            return [{
-                    TableName: this.tableName,
-                    Key: { [this.pkName]: this.pkValue }
-                }];
-        }
-        return sks.map(sk => ({
-            TableName: this.tableName,
-            Key: {
-                [this.pkName]: this.pkValue,
-                [this.skName]: sk
-            }
-        }));
-    }
-    /**
-     * Generates items for batch write (put).
-     */
-    batchWriteInput(...items) {
-        return items.map(item => ({
-            TableName: this.tableName,
-            PutRequest: {
-                Item: Object.assign({ [this.pkName]: this.pkValue }, item)
-            }
-        }));
-    }
-    /**
-     * Generates items for batch delete.
-     */
-    batchDeleteInput(...sks) {
-        return sks.map(sk => ({
-            TableName: this.tableName,
-            DeleteRequest: {
-                Key: {
-                    [this.pkName]: this.pkValue,
-                    [this.skName]: sk
-                }
-            }
-        }));
-    }
     mapItemToModel(item) {
         const pkName = this.db.getPkName();
         const pkValue = item[pkName];

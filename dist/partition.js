@@ -145,53 +145,6 @@ class Partition {
         return this.pkValue;
     }
     /**
-     * Generates items for batch query.
-     * If no SKs are provided, it might not be very useful for batchGet (which requires full keys),
-     * but the requirement says "will get all by pkValue" if no sk defined.
-     * Actually, BatchGetItem requires both PK and SK if the table has both.
-     * If it's for IndexQuery, it might be different.
-     */
-    batchGetInput(...sks) {
-        if (sks.length === 0) {
-            return [{
-                    TableName: this.tableName,
-                    Key: { [this.pkName]: this.pkValue }
-                }];
-        }
-        return sks.map(sk => ({
-            TableName: this.tableName,
-            Key: {
-                [this.pkName]: this.pkValue,
-                [this.skName]: sk
-            }
-        }));
-    }
-    /**
-     * Generates items for batch write (put).
-     */
-    batchWriteInput(...items) {
-        return items.map(item => ({
-            TableName: this.tableName,
-            PutRequest: {
-                Item: Object.assign({ [this.pkName]: this.pkValue }, item)
-            }
-        }));
-    }
-    /**
-     * Generates items for batch delete.
-     */
-    batchDeleteInput(...sks) {
-        return sks.map(sk => ({
-            TableName: this.tableName,
-            DeleteRequest: {
-                Key: {
-                    [this.pkName]: this.pkValue,
-                    [this.skName]: sk
-                }
-            }
-        }));
-    }
-    /**
      * Delete all data in this partition.
      */
     deleteAll() {
@@ -207,24 +160,12 @@ class Partition {
                 },
             });
             if (response.Items && response.Items.length > 0) {
-                // DynamoDB BatchWriteItem supports up to 25 requests at once
-                const items = response.Items;
-                const chunks = [];
-                for (let i = 0; i < items.length; i += 25) {
-                    chunks.push(items.slice(i, i + 25));
-                }
-                for (const chunk of chunks) {
-                    const deleteRequests = chunk.map((item) => ({
-                        DeleteRequest: {
-                            Key: {
-                                [this.pkName]: item[this.pkName],
-                                [this.skName]: item[this.skName],
-                            },
-                        },
-                    }));
-                    yield this.db.batchWrite({
-                        RequestItems: {
-                            [this.tableName]: deleteRequests,
+                for (const item of response.Items) {
+                    yield this.db.delete({
+                        TableName: this.tableName,
+                        Key: {
+                            [this.pkName]: item[this.pkName],
+                            [this.skName]: item[this.skName],
                         },
                     });
                 }
