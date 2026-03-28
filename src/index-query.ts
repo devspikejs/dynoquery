@@ -90,6 +90,14 @@ export class IndexQuery {
     return this.pkValue;
   }
 
+  getPkName(): string {
+    return this.pkName;
+  }
+
+  getSkName(): string {
+    return this.skName;
+  }
+
   getSkValue(): string | undefined {
     return this.skValue;
   }

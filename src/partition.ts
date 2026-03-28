@@ -1,4 +1,5 @@
 import { DynoQuery } from "./index";
+import { IndexQuery } from "./index-query";
 
 export interface PartitionConfig {
   tableName?: string;
@@ -88,12 +89,22 @@ export class Partition {
   /**
    * Create an item in this partition.
    */
-  async create<T = any>(sk: string, data: T): Promise<void> {
-    const item = {
+  async create<T = any>(sk: string, data: T, indices?: IndexQuery[]): Promise<void> {
+    const item: any = {
       [this.pkName]: this.pkValue,
       [this.skName]: sk,
       ...data,
     };
+
+    if (indices) {
+      indices.forEach((index) => {
+        item[index.getPkName()] = index.getPkValue();
+        if (index.getSkValue() !== undefined) {
+          item[index.getSkName()] = index.getSkValue();
+        }
+      });
+    }
+
     await this.db.create({
       TableName: this.tableName,
       Item: item,

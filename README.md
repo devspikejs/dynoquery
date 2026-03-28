@@ -33,7 +33,8 @@ const db = new DynoQuery({
   },
   findBy: {
     //  TENANT#A#CAT#
-    Category: { indexName: 'GSI1', pkPrefix: 'CAT#' } // pkName defaults to GSI1PK, skName defaults to GSI1SK
+    Category: { indexName: 'GSI1', pkPrefix: 'CAT#' }, // pkName defaults to GSI1PK, skName defaults to GSI1SK
+    Date: { indexName: 'GSI2', pkPrefix: 'DATE#' }
   }
 });
 
@@ -69,13 +70,12 @@ async function example() {
   
   // Resulting GSI1PK: TENANT#A#CAT#USER
   const cat = db.findByCategory('USER', '1');
+  const date = db.findByDate('2026-10-11', '2');
   console.log(cat.getSkValue()); // '1'
   await john.create('PROFILE', { 
     name: 'John Doe', 
     email: 'john@example.com', 
-    GSI1PK: cat.getPkValue(), 
-    GSI1SK: cat.getSkValue() 
-  });
+  }, [cat, date]);
 
   // Update the item (updates both DB and partition cache)
   await john.update('PROFILE', { theme: 'dark' });
@@ -112,7 +112,7 @@ A way to manage data within a specific partition.
 - `getPkValue()`: Returns the generated partition key value.
 - `get(sk)`: Fetches data for a specific sort key (returns a Promise).
 - `getAll()`: Fetches all items in the partition and caches them. Returns the items.
-- `create(sk, data)`: Creates an item in the partition.
+- `create(sk, data, indices?)`: Creates an item in the partition. If `indices` (array of `IndexQuery`) are provided, it automatically adds the index PK and SK to the item.
 - `update(sk, data)`: Updates an existing item (partial update).
 - `delete(sk)`: Deletes an item.
 - `deleteAll()`: Deletes all items in the partition.
