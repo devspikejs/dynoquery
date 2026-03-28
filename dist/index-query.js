@@ -18,6 +18,7 @@ class IndexQuery {
         this.indexName = config.indexName;
         this.pkName = config.pkName || (this.indexName + "PK");
         this.skName = config.skName || (this.indexName + "SK");
+        this.skValue = config.skValue;
         const globalPrefix = db.getPkPrefix();
         const indexPrefix = config.pkPrefix || "";
         let finalPrefix = indexPrefix;
@@ -37,6 +38,9 @@ class IndexQuery {
             }
             else if (typeof skValueOrOptions === 'object') {
                 options = skValueOrOptions;
+            }
+            else if (this.skValue) {
+                options.skValue = this.skValue;
             }
             let keyCondition = "#pk = :pk";
             const expressionAttributeNames = {
@@ -70,6 +74,9 @@ class IndexQuery {
     }
     getPkValue() {
         return this.pkValue;
+    }
+    getSkValue() {
+        return this.skValue;
     }
     mapItemToModel(item) {
         const pkName = this.db.getPkName();

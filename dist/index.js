@@ -64,13 +64,14 @@ class DynoQuery {
             const { IndexQuery } = require("./index-query");
             Object.entries(findBy).forEach(([name, def]) => {
                 const methodName = `findBy${name}`;
-                this[methodName] = (id) => {
+                this[methodName] = (id, skValue) => {
                     return new IndexQuery(this, {
                         indexName: def.indexName,
                         pkName: def.pkName,
                         skName: def.skName,
                         pkPrefix: def.pkPrefix,
-                        pkValue: id
+                        pkValue: id,
+                        skValue: skValue
                     });
                 };
             });
