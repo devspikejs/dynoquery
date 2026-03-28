@@ -75,6 +75,12 @@ class IndexQuery {
     getPkValue() {
         return this.pkValue;
     }
+    getPkName() {
+        return this.pkName;
+    }
+    getSkName() {
+        return this.skName;
+    }
     getSkValue() {
         return this.skValue;
     }

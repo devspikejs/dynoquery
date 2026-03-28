@@ -24,6 +24,8 @@ export declare class IndexQuery {
     }): Promise<T[]>;
     getAll<T = any>(): Promise<T[]>;
     getPkValue(): string;
+    getPkName(): string;
+    getSkName(): string;
     getSkValue(): string | undefined;
     private mapItemToModel;
 }

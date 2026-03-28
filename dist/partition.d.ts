@@ -1,4 +1,5 @@
 import { DynoQuery } from "./index";
+import { IndexQuery } from "./index-query";
 export interface PartitionConfig {
     tableName?: string;
     pk?: string;
@@ -21,7 +22,7 @@ export declare class Partition {
     /**
      * Create an item in this partition.
      */
-    create<T = any>(sk: string, data: T): Promise<void>;
+    create<T = any>(sk: string, data: T, indices?: IndexQuery[]): Promise<void>;
     /**
      * Update an existing item in this partition.
      */

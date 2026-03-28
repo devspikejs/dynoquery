@@ -79,9 +79,17 @@ class Partition {
     /**
      * Create an item in this partition.
      */
-    create(sk, data) {
+    create(sk, data, indices) {
         return __awaiter(this, void 0, void 0, function* () {
             const item = Object.assign({ [this.pkName]: this.pkValue, [this.skName]: sk }, data);
+            if (indices) {
+                indices.forEach((index) => {
+                    item[index.getPkName()] = index.getPkValue();
+                    if (index.getSkValue() !== undefined) {
+                        item[index.getSkName()] = index.getSkValue();
+                    }
+                });
+            }
             yield this.db.create({
                 TableName: this.tableName,
                 Item: item,
