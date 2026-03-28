@@ -29,7 +29,7 @@ const db = new DynoQuery({
   pkPrefix: 'TENANT#A#', // Optional: Global prefix for all partitions (useful for multitenancy)
   // optional endpoint for local development
   // endpoint: 'http://localhost:8000'
-  partitions: {
+  models: {
     User: { pkPrefix: 'USER#' }, // TENANT#A#USER#
   },
   indexes: {
@@ -173,7 +173,7 @@ A way to query Global Secondary Indexes.
 - `batchGetInput(...sks)`: Generates items for batch query.
 - `batchWriteInput(...items)`: Generates items for batch write.
 - `batchDeleteInput(...sks)`: Generates items for batch delete.
-- Automatically identifies models in results using `__model` and provides `getPartition()` helper.
+- Automatically identifies the model name in results using `__model` (based on registered models) and provides `getPartition()` helper.
 
 ## License
 

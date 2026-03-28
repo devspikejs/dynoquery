@@ -24,7 +24,7 @@ describe("IndexQuery", () => {
     db = new DynoQuery({
       region: "us-east-1",
       tableName: "TestTable",
-      partitions: {
+      models: {
         User: { pkPrefix: "USER#" },
         Product: { pkPrefix: "PROD#" }
       },

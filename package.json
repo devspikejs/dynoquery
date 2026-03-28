@@ -15,6 +15,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest src",
+    "version": "npm run build && git add dist",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

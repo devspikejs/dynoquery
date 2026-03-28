@@ -140,10 +140,10 @@ export class IndexQuery {
 
     if (!pkValue) return item;
 
-    const registeredPartitions = this.db.getRegisteredPartitions();
+    const registeredModels = this.db.getRegisteredModels();
     const globalPrefix = this.db.getPkPrefix();
 
-    for (const [name, def] of Object.entries(registeredPartitions)) {
+    for (const [name, def] of Object.entries(registeredModels)) {
       const fullPrefix = globalPrefix + def.pkPrefix;
       if (pkValue.startsWith(fullPrefix)) {
         // Find the ID by removing the prefix

@@ -24,7 +24,7 @@ describe("Advanced Batch Get Support", () => {
     db = new DynoQuery({
       region: "us-east-1",
       tableName: "TestTable",
-      partitions: {
+      models: {
         User: { pkPrefix: "USER#" },
       },
       indexes: {
@@ -37,7 +37,7 @@ describe("Advanced Batch Get Support", () => {
 
   it("should support batchGetInput from Partition", () => {
     const john = (db as any).User("john@example.com");
-    
+
     const singleInput = john.batchGetInput("METADATA");
     expect(singleInput).toEqual([{ TableName: "TestTable", Key: { PK: "USER#john@example.com", SK: "METADATA" } }]);
 
@@ -53,7 +53,7 @@ describe("Advanced Batch Get Support", () => {
 
   it("should support batchGetInput from IndexQuery", () => {
     const cat = (db as any).ByCategory("1");
-    
+
     const singleInput = cat.batchGetInput("100");
     expect(singleInput).toEqual([{ TableName: "TestTable", Key: { GSI1PK: "CAT#1", GSI1SK: "100" } }]);
 

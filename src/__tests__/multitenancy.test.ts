@@ -26,7 +26,7 @@ describe("Multitenancy Support", () => {
       region: "us-east-1",
       tableName: "MultitenantTable",
       pkPrefix: "TENANT#A#", // Global prefix for all partitions
-      partitions: {
+      models: {
         User: { pkPrefix: "USER#" }
       }
     });

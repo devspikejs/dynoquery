@@ -32,7 +32,7 @@ export interface DynoQueryConfig {
     secretAccessKey: string;
     sessionToken?: string;
   };
-  partitions?: Record<string, { pkPrefix: string }>;
+  models?: Record<string, { pkPrefix: string }>;
   indexes?: Record<string, { indexName: string, pkName?: string, skName?: string, pkPrefix?: string }>;
 }
 
@@ -51,7 +51,7 @@ export class DynoQuery {
   private globalPkPrefix: string;
   private pkName: string;
   private skName: string;
-  private registeredPartitions: Record<string, { pkPrefix: string }> = {};
+  private registeredModels: Record<string, { pkPrefix: string }> = {};
   [key: string]: any;
 
   constructor(config: DynoQueryConfig = {}) {
@@ -60,7 +60,7 @@ export class DynoQuery {
       pkName,
       skName,
       pkPrefix,
-      partitions,
+      models,
       indexes,
       ...clientConfig
     } = config;
@@ -76,9 +76,9 @@ export class DynoQuery {
     this.pkName = pkName || "PK";
     this.skName = skName || "SK";
 
-    if (partitions) {
-      this.registeredPartitions = partitions;
-      Object.entries(partitions).forEach(([name, def]) => {
+    if (models) {
+      this.registeredModels = models;
+      Object.entries(models).forEach(([name, def]) => {
         this[name] = (id: string) => {
           return new Partition(this, { pkPrefix: this.globalPkPrefix + def.pkPrefix }, id);
         };
@@ -193,7 +193,7 @@ export class DynoQuery {
 
     if (!finalParams.RequestItems && finalParams.Items) {
       finalParams.RequestItems = {};
-      
+
       finalParams.Items.forEach((item: any) => {
         const tableName = item.TableName || this.defaultTableName;
         if (!tableName) {
@@ -222,7 +222,7 @@ export class DynoQuery {
   async batchWrite(params: BatchWriteInput) {
     if (!params.RequestItems && params.Items) {
       params.RequestItems = {};
-      
+
       params.Items.forEach((item: any) => {
         const tableName = item.TableName || this.defaultTableName;
         if (!tableName) {
@@ -261,8 +261,8 @@ export class DynoQuery {
     return this.skName;
   }
 
-  getRegisteredPartitions(): Record<string, { pkPrefix: string }> {
-    return this.registeredPartitions;
+  getRegisteredModels(): Record<string, { pkPrefix: string }> {
+    return this.registeredModels;
   }
 }
 

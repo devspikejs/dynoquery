@@ -26,7 +26,7 @@ describe("Custom Key Names Support", () => {
       tableName: "CustomTable",
       pkName: "partition_key",
       skName: "sort_key",
-      partitions: {
+      models: {
         User: { pkPrefix: "USER#" }
       }
     });
