@@ -266,6 +266,5 @@ export class DynoQuery {
   }
 }
 
-export * from "./model";
 export * from "./partition";
 export * from "./index-query";

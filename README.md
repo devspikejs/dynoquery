@@ -12,7 +12,6 @@ npm install dynoquery
 
 - Basic CRUD operations (create, get, update, delete)
 - Optimized for **Single-Table Design**
-- Model-based approach for easy data management
 - Query and Scan support
 - Batch operations (batchGet, batchWrite)
 - TypeScript support
@@ -67,24 +66,23 @@ async function example() {
   console.log(userMetadata);
 
   // Create an item through partition
-  const profileModel = await john.create('PROFILE', { name: 'John Doe', email: 'john@example.com' });
+  await john.create('PROFILE', { name: 'John Doe', email: 'john@example.com' });
   
   // You can also use getPkValue() to get the generated PK for the partition or index
   // This is useful when you need to store it in another attribute (e.g., GSI)
   const cat = db.ByCategory('USER');
-  const profileWithGSI = await john.create('PROFILE', { 
+  await john.create('PROFILE', { 
     name: 'John Doe', 
     email: 'john@example.com', 
     GSI1PK: cat.getPkValue(), 
     GSI1SK: 'john@example.com' 
   });
 
-  // Update the model (updates both DB and partition cache)
-  await profileModel.update({ theme: 'dark' });
+  // Update the item (updates both DB and partition cache)
+  await john.update('PROFILE', { theme: 'dark' });
 
-  // If you need the Model instance for save/delete without immediate create:
-  const metaModel = john.model('METADATA');
-  await metaModel.save({ lastLogin: new Date().toISOString() });
+  // Delete an item
+  await john.delete('METADATA');
 
   // Advanced Partition usage (Subclassing)
   class UserPartition extends Partition {
@@ -154,20 +152,14 @@ The main client for interacting with DynamoDB.
 - `batchGet(params)`: Batch get items.
 - `batchWrite(params)`: Batch write items.
 
-### Model
-A model-based abstraction for a specific data type.
-- `find(id?)`: Find an item by ID (PK suffix).
-- `save(data, id?)`: Save an item.
-- `update(data, id?)`: Update an existing item (partial update).
-- `remove(id?)`: Delete an item.
-
 ### Partition
-A way to manage models and data within a specific partition.
+A way to manage data within a specific partition.
 - `getPkValue()`: Returns the generated partition key value.
 - `get(sk)`: Fetches data for a specific sort key (returns a Promise).
 - `getAll()`: Fetches all items in the partition and caches them. Returns the items.
-- `create(sk, data)`: Creates an item in the partition and returns its `Model`.
-- `model(sk)`: Get a `Model` instance for a specific sort key.
+- `create(sk, data)`: Creates an item in the partition.
+- `update(sk, data)`: Updates an existing item (partial update).
+- `delete(sk)`: Deletes an item.
 - `batchGetInput(...sks)`: Generates items for batch query.
 - `batchWriteInput(...items)`: Generates items for batch write.
 - `batchDeleteInput(...sks)`: Generates items for batch delete.

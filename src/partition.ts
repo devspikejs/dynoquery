@@ -1,5 +1,4 @@
 import { DynoQuery } from "./index";
-import { Model, ModelConfig } from "./model";
 
 export interface PartitionConfig {
   tableName?: string;
@@ -87,22 +86,71 @@ export class Partition {
   }
 
   /**
-   * Get a model instance for a specific SK within this partition.
+   * Create an item in this partition.
    */
-  model<T = any>(sk: string): Model<T> {
-    const config: ModelConfig<T> = {
-      tableName: this.tableName,
-      pkPrefix: this.pkValue, // In this context, pkValue is fixed, so prefix is the full PK
-      skValue: sk,
-      onUpdate: (updatedSk: any, data: any) => {
-        if (data === null) {
-          delete this.cache[updatedSk];
-        } else {
-          this.cache[updatedSk] = data;
-        }
-      }
+  async create<T = any>(sk: string, data: T): Promise<void> {
+    const item = {
+      [this.pkName]: this.pkValue,
+      [this.skName]: sk,
+      ...data,
     };
-    return new Model<T>(this.db, config);
+    await this.db.create({
+      TableName: this.tableName,
+      Item: item,
+    });
+    this.cache[sk] = item;
+  }
+
+  /**
+   * Update an existing item in this partition.
+   */
+  async update<T = any>(sk: string, data: Partial<T>): Promise<void> {
+    const current = await this.get<T>(sk) || ({} as T);
+    const updated = { ...current, ...data } as T;
+    await this.create(sk, updated);
+  }
+
+  /**
+   * Delete an item by its SK within this partition.
+   */
+  async delete(sk: string): Promise<void> {
+    await this.db.delete({
+      TableName: this.tableName,
+      Key: {
+        [this.pkName]: this.pkValue,
+        [this.skName]: sk,
+      },
+    });
+    delete this.cache[sk];
+  }
+
+  /**
+   * Get data for a specific SK within this partition.
+   * If the partition is loaded, it returns from cache.
+   * Otherwise, it fetches the data immediately.
+   */
+  async get<T = any>(sk: string): Promise<T | null> {
+    if (this.cache[sk] !== undefined) {
+      return (this.cache[sk] as T) || null;
+    }
+
+    if (this.isLoaded) {
+      return null;
+    }
+
+    const response = await this.db.get({
+      TableName: this.tableName,
+      Key: {
+        [this.pkName]: this.pkValue,
+        [this.skName]: sk,
+      },
+    });
+
+    const data = (response.Item as unknown as T) || null;
+    if (data) {
+      this.cache[sk] = data;
+    }
+    return data;
   }
 
   getPkValue(): string {
@@ -162,36 +210,6 @@ export class Partition {
     }));
   }
 
-  /**
-   * Create an item in this partition and return the model.
-   */
-  async create<T = any>(sk: string, data: T): Promise<Model<T>> {
-    const m = this.model<T>(sk);
-    await m.save(data);
-    return m;
-  }
-
-  /**
-   * Get data for a specific SK within this partition.
-   * If the partition is loaded, it returns from cache.
-   * Otherwise, it fetches the data immediately.
-   */
-  async get<T = any>(sk: string): Promise<T | null> {
-    if (this.cache[sk] !== undefined) {
-      return (this.cache[sk] as T) || null;
-    }
-
-    if (this.isLoaded) {
-      return null;
-    }
-
-    const model = this.model<T>(sk);
-    const data = await model.find();
-    if (data) {
-      this.cache[sk] = data;
-    }
-    return data;
-  }
 
   /**
    * Delete all data in this partition.

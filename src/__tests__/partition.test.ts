@@ -78,31 +78,10 @@ describe("Partition", () => {
     expect(mockSend).toHaveBeenCalledTimes(1);
   });
 
-  it("should allow saving data to the partition model via model()", async () => {
-    const profileModel = userPartition.model("PROFILE");
-    mockSend.mockResolvedValue({ });
-
-    await profileModel.save({ name: "John Doe", age: 30 });
-
-    expect(mockSend).toHaveBeenCalledWith(
-      expect.objectContaining({
-        input: {
-          TableName: "AppTable",
-          Item: {
-            PK: "USER#john@example.com",
-            SK: "PROFILE",
-            name: "John Doe",
-            age: 30,
-          },
-        },
-      })
-    );
-  });
-
   it("should allow creating an item directly from partition and update cache", async () => {
-    mockSend.mockResolvedValue({ }); // default response for all calls
+    mockSend.mockResolvedValue({}); // default response for all calls
 
-    const profile = await userPartition.create("PROFILE", { name: "John Doe" });
+    await userPartition.create("PROFILE", { name: "John Doe" });
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -128,16 +107,13 @@ describe("Partition", () => {
     expect(mockSend).toHaveBeenCalledTimes(1);
   });
 
-  it("should update cache when model.update is called", async () => {
-    const profileModel = userPartition.model("PROFILE");
-
-    // update calls db.get then db.create (via save)
+  it("should update cache when update is called", async () => {
+    // update calls db.get then db.create
     mockSend
-      .mockResolvedValue({ }) // default
       .mockResolvedValueOnce({ Item: { PK: "USER#john@example.com", SK: "PROFILE", name: "John" } }) // get
-      .mockResolvedValueOnce({ }); // create (save)
+      .mockResolvedValueOnce({}); // create
 
-    await profileModel.update({ theme: "dark" });
+    await userPartition.update("PROFILE", { theme: "dark" });
 
     const cachedData = await userPartition.get("PROFILE");
     expect(cachedData).toEqual({
@@ -148,16 +124,14 @@ describe("Partition", () => {
     });
   });
 
-  it("should remove from cache when model.remove is called", async () => {
-    const profileModel = userPartition.model("PROFILE");
-
+  it("should remove from cache when delete is called", async () => {
     // Pre-populate cache
     mockSend.mockResolvedValueOnce({ Item: { PK: "USER#john@example.com", SK: "PROFILE", name: "John" } });
     await userPartition.get("PROFILE");
     expect(userPartition["cache"]["PROFILE"]).toBeDefined();
 
-    mockSend.mockResolvedValueOnce({}); // remove
-    await profileModel.remove();
+    mockSend.mockResolvedValueOnce({}); // delete
+    await userPartition.delete("PROFILE");
 
     expect(userPartition["cache"]["PROFILE"]).toBeUndefined();
   });
