@@ -14,7 +14,7 @@ export interface DynoQueryConfig {
     models?: Record<string, {
         pkPrefix: string;
     }>;
-    indexes?: Record<string, {
+    findBy?: Record<string, {
         indexName: string;
         pkName?: string;
         skName?: string;

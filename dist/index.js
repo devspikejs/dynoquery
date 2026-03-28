@@ -41,7 +41,7 @@ const partition_1 = require("./partition");
 class DynoQuery {
     constructor(config = {}) {
         this.registeredModels = {};
-        const { tableName, pkName, skName, pkPrefix, models, indexes } = config, clientConfig = __rest(config, ["tableName", "pkName", "skName", "pkPrefix", "models", "indexes"]);
+        const { tableName, pkName, skName, pkPrefix, models, findBy } = config, clientConfig = __rest(config, ["tableName", "pkName", "skName", "pkPrefix", "models", "findBy"]);
         this.client = new client_dynamodb_1.DynamoDBClient(clientConfig);
         this.docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(this.client, {
             marshallOptions: {
@@ -60,10 +60,11 @@ class DynoQuery {
                 };
             });
         }
-        if (indexes) {
+        if (findBy) {
             const { IndexQuery } = require("./index-query");
-            Object.entries(indexes).forEach(([name, def]) => {
-                this[name] = (id) => {
+            Object.entries(findBy).forEach(([name, def]) => {
+                const methodName = `findBy${name}`;
+                this[methodName] = (id) => {
                     return new IndexQuery(this, {
                         indexName: def.indexName,
                         pkName: def.pkName,
