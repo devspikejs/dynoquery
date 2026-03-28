@@ -10,7 +10,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Partition = void 0;
-const model_1 = require("./model");
 class Partition {
     constructor(db, config, id) {
         this.cache = {};
@@ -78,23 +77,69 @@ class Partition {
         });
     }
     /**
-     * Get a model instance for a specific SK within this partition.
+     * Create an item in this partition.
      */
-    model(sk) {
-        const config = {
-            tableName: this.tableName,
-            pkPrefix: this.pkValue, // In this context, pkValue is fixed, so prefix is the full PK
-            skValue: sk,
-            onUpdate: (updatedSk, data) => {
-                if (data === null) {
-                    delete this.cache[updatedSk];
-                }
-                else {
-                    this.cache[updatedSk] = data;
-                }
+    create(sk, data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const item = Object.assign({ [this.pkName]: this.pkValue, [this.skName]: sk }, data);
+            yield this.db.create({
+                TableName: this.tableName,
+                Item: item,
+            });
+            this.cache[sk] = item;
+        });
+    }
+    /**
+     * Update an existing item in this partition.
+     */
+    update(sk, data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const current = (yield this.get(sk)) || {};
+            const updated = Object.assign(Object.assign({}, current), data);
+            yield this.create(sk, updated);
+        });
+    }
+    /**
+     * Delete an item by its SK within this partition.
+     */
+    delete(sk) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.db.delete({
+                TableName: this.tableName,
+                Key: {
+                    [this.pkName]: this.pkValue,
+                    [this.skName]: sk,
+                },
+            });
+            delete this.cache[sk];
+        });
+    }
+    /**
+     * Get data for a specific SK within this partition.
+     * If the partition is loaded, it returns from cache.
+     * Otherwise, it fetches the data immediately.
+     */
+    get(sk) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.cache[sk] !== undefined) {
+                return this.cache[sk] || null;
             }
-        };
-        return new model_1.Model(this.db, config);
+            if (this.isLoaded) {
+                return null;
+            }
+            const response = yield this.db.get({
+                TableName: this.tableName,
+                Key: {
+                    [this.pkName]: this.pkValue,
+                    [this.skName]: sk,
+                },
+            });
+            const data = response.Item || null;
+            if (data) {
+                this.cache[sk] = data;
+            }
+            return data;
+        });
     }
     getPkValue() {
         return this.pkValue;
@@ -145,37 +190,6 @@ class Partition {
                 }
             }
         }));
-    }
-    /**
-     * Create an item in this partition and return the model.
-     */
-    create(sk, data) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const m = this.model(sk);
-            yield m.save(data);
-            return m;
-        });
-    }
-    /**
-     * Get data for a specific SK within this partition.
-     * If the partition is loaded, it returns from cache.
-     * Otherwise, it fetches the data immediately.
-     */
-    get(sk) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this.cache[sk] !== undefined) {
-                return this.cache[sk] || null;
-            }
-            if (this.isLoaded) {
-                return null;
-            }
-            const model = this.model(sk);
-            const data = yield model.find();
-            if (data) {
-                this.cache[sk] = data;
-            }
-            return data;
-        });
     }
     /**
      * Delete all data in this partition.

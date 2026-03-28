@@ -1,5 +1,4 @@
 import { DynoQuery } from "./index";
-import { Model } from "./model";
 export interface PartitionConfig {
     tableName?: string;
     pk?: string;
@@ -20,9 +19,23 @@ export declare class Partition {
      */
     getAll<T = any>(): Promise<T[]>;
     /**
-     * Get a model instance for a specific SK within this partition.
+     * Create an item in this partition.
      */
-    model<T = any>(sk: string): Model<T>;
+    create<T = any>(sk: string, data: T): Promise<void>;
+    /**
+     * Update an existing item in this partition.
+     */
+    update<T = any>(sk: string, data: Partial<T>): Promise<void>;
+    /**
+     * Delete an item by its SK within this partition.
+     */
+    delete(sk: string): Promise<void>;
+    /**
+     * Get data for a specific SK within this partition.
+     * If the partition is loaded, it returns from cache.
+     * Otherwise, it fetches the data immediately.
+     */
+    get<T = any>(sk: string): Promise<T | null>;
     getPkValue(): string;
     /**
      * Generates items for batch query.
@@ -40,16 +53,6 @@ export declare class Partition {
      * Generates items for batch delete.
      */
     batchDeleteInput(...sks: string[]): any[];
-    /**
-     * Create an item in this partition and return the model.
-     */
-    create<T = any>(sk: string, data: T): Promise<Model<T>>;
-    /**
-     * Get data for a specific SK within this partition.
-     * If the partition is loaded, it returns from cache.
-     * Otherwise, it fetches the data immediately.
-     */
-    get<T = any>(sk: string): Promise<T | null>;
     /**
      * Delete all data in this partition.
      */

@@ -77,6 +77,5 @@ export declare class DynoQuery {
         pkPrefix: string;
     }>;
 }
-export * from "./model";
 export * from "./partition";
 export * from "./index-query";

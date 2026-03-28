@@ -237,6 +237,5 @@ class DynoQuery {
     }
 }
 exports.DynoQuery = DynoQuery;
-__exportStar(require("./model"), exports);
 __exportStar(require("./partition"), exports);
 __exportStar(require("./index-query"), exports);
