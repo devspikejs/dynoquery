@@ -13,6 +13,7 @@ exports.IndexQuery = void 0;
 const partition_1 = require("./partition");
 class IndexQuery {
     constructor(db, config) {
+        this.lastEvaluatedKey = null;
         this.db = db;
         this.tableName = config.tableName || db.getTableName() || "";
         this.indexName = config.indexName;
@@ -30,18 +31,9 @@ class IndexQuery {
             throw new Error("TableName must be provided in IndexQueryConfig or DynoQueryConfig");
         }
     }
-    get(skValueOrOptions) {
+    getAll(options) {
         return __awaiter(this, void 0, void 0, function* () {
-            let options = {};
-            if (typeof skValueOrOptions === 'string') {
-                options.skValue = skValueOrOptions;
-            }
-            else if (typeof skValueOrOptions === 'object') {
-                options = skValueOrOptions;
-            }
-            else if (this.skValue) {
-                options.skValue = this.skValue;
-            }
+            const finalSkValue = (options === null || options === void 0 ? void 0 : options.skValue) || this.skValue;
             let keyCondition = "#pk = :pk";
             const expressionAttributeNames = {
                 "#pk": this.pkName,
@@ -49,10 +41,10 @@ class IndexQuery {
             const expressionAttributeValues = {
                 ":pk": this.pkValue,
             };
-            if (options.skValue) {
+            if (finalSkValue) {
                 keyCondition += " AND begins_with(#sk, :sk)";
                 expressionAttributeNames["#sk"] = this.skName;
-                expressionAttributeValues[":sk"] = options.skValue;
+                expressionAttributeValues[":sk"] = finalSkValue;
             }
             const response = yield this.db.query({
                 TableName: this.tableName,
@@ -60,16 +52,20 @@ class IndexQuery {
                 KeyConditionExpression: keyCondition,
                 ExpressionAttributeNames: expressionAttributeNames,
                 ExpressionAttributeValues: expressionAttributeValues,
-                Limit: options.limit,
-                ScanIndexForward: options.scanIndexForward,
+                Limit: options === null || options === void 0 ? void 0 : options.limit,
+                ScanIndexForward: options === null || options === void 0 ? void 0 : options.scanIndexForward,
+                ExclusiveStartKey: options === null || options === void 0 ? void 0 : options.exclusiveStartKey,
             });
             const items = (response.Items || []);
-            return items.map(item => this.mapItemToModel(item));
+            const mappedItems = items.map(item => this.mapItemToModel(item));
+            this.lastEvaluatedKey = response.LastEvaluatedKey || null;
+            return mappedItems;
         });
     }
-    getAll() {
+    get(skValue) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.get();
+            const items = yield this.getAll({ limit: 1, skValue });
+            return items.length > 0 ? items[0] : null;
         });
     }
     getPkValue() {
@@ -83,6 +79,9 @@ class IndexQuery {
     }
     getSkValue() {
         return this.skValue;
+    }
+    getLastEvaluatedKey() {
+        return this.lastEvaluatedKey;
     }
     mapItemToModel(item) {
         const pkName = this.db.getPkName();

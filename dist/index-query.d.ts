@@ -16,16 +16,19 @@ export declare class IndexQuery {
     protected skName: string;
     protected pkValue: string;
     protected skValue?: string;
+    protected lastEvaluatedKey: any;
     constructor(db: DynoQuery, config: IndexQueryConfig);
-    get<T = any>(skValueOrOptions?: string | {
-        skValue?: string;
+    getAll<T = any>(options?: {
         limit?: number;
         scanIndexForward?: boolean;
+        exclusiveStartKey?: any;
+        skValue?: string;
     }): Promise<T[]>;
-    getAll<T = any>(): Promise<T[]>;
+    get<T = any>(skValue?: string): Promise<T | null>;
     getPkValue(): string;
     getPkName(): string;
     getSkName(): string;
     getSkValue(): string | undefined;
+    getLastEvaluatedKey(): any;
     private mapItemToModel;
 }

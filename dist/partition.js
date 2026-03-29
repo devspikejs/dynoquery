@@ -14,6 +14,7 @@ class Partition {
     constructor(db, config, id) {
         this.cache = {};
         this.isLoaded = false;
+        this.lastEvaluatedKey = null;
         this.db = db;
         this.tableName = config.tableName || db.getTableName();
         this.pkName = db.getPkName();
@@ -54,7 +55,7 @@ class Partition {
      * Fetches all items in the partition and caches them.
      * Returns the data and caches it.
      */
-    getAll() {
+    getAll(options) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.db.query({
                 TableName: this.tableName,
@@ -65,6 +66,8 @@ class Partition {
                 ExpressionAttributeValues: {
                     ":pk": this.pkValue,
                 },
+                Limit: options === null || options === void 0 ? void 0 : options.limit,
+                ExclusiveStartKey: options === null || options === void 0 ? void 0 : options.exclusiveStartKey,
             });
             const items = (response.Items || []);
             items.forEach((item) => {
@@ -72,7 +75,10 @@ class Partition {
                     this.cache[item[this.skName]] = item;
                 }
             });
-            this.isLoaded = true;
+            if (!(options === null || options === void 0 ? void 0 : options.exclusiveStartKey) && !response.LastEvaluatedKey) {
+                this.isLoaded = true;
+            }
+            this.lastEvaluatedKey = response.LastEvaluatedKey || null;
             return items;
         });
     }
@@ -151,6 +157,9 @@ class Partition {
     }
     getPkValue() {
         return this.pkValue;
+    }
+    getLastEvaluatedKey() {
+        return this.lastEvaluatedKey;
     }
     /**
      * Delete all data in this partition.

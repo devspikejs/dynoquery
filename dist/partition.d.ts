@@ -13,12 +13,16 @@ export declare class Partition {
     protected skName: string;
     protected cache: Record<string, any>;
     protected isLoaded: boolean;
+    protected lastEvaluatedKey: any;
     constructor(db: DynoQuery, config: PartitionConfig, id?: string);
     /**
      * Fetches all items in the partition and caches them.
      * Returns the data and caches it.
      */
-    getAll<T = any>(): Promise<T[]>;
+    getAll<T = any>(options?: {
+        limit?: number;
+        exclusiveStartKey?: any;
+    }): Promise<T[]>;
     /**
      * Create an item in this partition.
      */
@@ -38,6 +42,7 @@ export declare class Partition {
      */
     get<T = any>(sk: string): Promise<T | null>;
     getPkValue(): string;
+    getLastEvaluatedKey(): any;
     /**
      * Delete all data in this partition.
      */
