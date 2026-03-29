@@ -46,7 +46,7 @@ async function example() {
   // Use registered index
   // Resulting GSI1PK: TENANT#A#CAT#1
   const categories = db.findByCategory('1');
-  const items = await categories.get('100');
+  const items = await categories.getAll({ limit: 100 });
   const allItems = await categories.getAll();
   
   // Index results are automatically mapped to models based on PK prefix
@@ -111,7 +111,8 @@ The main client for interacting with DynamoDB.
 A way to manage data within a specific partition.
 - `getPkValue()`: Returns the generated partition key value.
 - `get(sk)`: Fetches data for a specific sort key (returns a Promise).
-- `getAll()`: Fetches all items in the partition and caches them. Returns the items.
+- `getAll(options?)`: Fetches items in the partition and caches them. Supports optional `limit` and `exclusiveStartKey`. If results are paginated, use `getLastEvaluatedKey()` to retrieve the pagination token. The partition is only marked as fully loaded (`isLoaded`) if a full result set is returned (no `exclusiveStartKey` provided and no pagination token returned).
+- `getLastEvaluatedKey()`: Returns the `LastEvaluatedKey` from the last `getAll()` call.
 - `create(sk, data, indices?)`: Creates an item in the partition. If `indices` (array of `IndexQuery`) are provided, it automatically adds the index PK and SK to the item.
 - `update(sk, data)`: Updates an existing item (partial update).
 - `delete(sk)`: Deletes an item.
@@ -121,8 +122,9 @@ A way to manage data within a specific partition.
 A way to query Global Secondary Indexes.
 - `getPkValue()`: Returns the generated partition key value for this index.
 - `getSkValue()`: Returns the sort key value if it was provided when calling the index query method.
-- `get(skValue | options)`: Query items in the index. Supports `skValue` (string) for `begins_with` search, or an options object with `skValue`, `limit`, and `scanIndexForward`. If `skValue` was provided when the `IndexQuery` was created, it will be used as the default if no `skValue` is passed here.
-- `getAll()`: Fetches all items in the index for the given partition key. If `skValue` was provided when the `IndexQuery` was created, it will filter by it using `begins_with`.
+- `get(skValue?)`: Get a single item from the index. If `skValue` was provided when the `IndexQuery` was created, it will be used as the default if no `skValue` is passed here. Returns a Promise of the item or null.
+- `getAll(options?)`: Query items in the index. Supports an options object with `limit`, `scanIndexForward`, `exclusiveStartKey`, and `skValue`. If `skValue` is provided in options, it overrides any `skValue` provided at construction. If results are paginated, use `getLastEvaluatedKey()` to retrieve the pagination token.
+- `getLastEvaluatedKey()`: Returns the `LastEvaluatedKey` from the last `getAll()` call.
 - Automatically identifies the model name in results using `__model` (based on registered models) and provides `getPartition()` helper.
 
 ## License

@@ -15,6 +15,7 @@ export class Partition {
   protected skName: string;
   protected cache: Record<string, any> = {};
   protected isLoaded: boolean = false;
+  protected lastEvaluatedKey: any = null;
 
   constructor(db: DynoQuery, config: PartitionConfig, id?: string) {
     this.db = db;
@@ -64,7 +65,7 @@ export class Partition {
    * Fetches all items in the partition and caches them.
    * Returns the data and caches it.
    */
-  async getAll<T = any>(): Promise<T[]> {
+  async getAll<T = any>(options?: { limit?: number, exclusiveStartKey?: any }): Promise<T[]> {
     const response = await this.db.query({
       TableName: this.tableName,
       KeyConditionExpression: "#pk = :pk",
@@ -74,6 +75,8 @@ export class Partition {
       ExpressionAttributeValues: {
         ":pk": this.pkValue,
       },
+      Limit: options?.limit,
+      ExclusiveStartKey: options?.exclusiveStartKey,
     });
 
     const items = (response.Items || []) as T[];
@@ -82,7 +85,13 @@ export class Partition {
         this.cache[item[this.skName]] = item;
       }
     });
-    this.isLoaded = true;
+
+    if (!options?.exclusiveStartKey && !response.LastEvaluatedKey) {
+      this.isLoaded = true;
+    }
+
+    this.lastEvaluatedKey = response.LastEvaluatedKey || null;
+
     return items;
   }
 
@@ -166,6 +175,10 @@ export class Partition {
 
   getPkValue(): string {
     return this.pkValue;
+  }
+
+  getLastEvaluatedKey(): any {
+    return this.lastEvaluatedKey;
   }
 
   /**

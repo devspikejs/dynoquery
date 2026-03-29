@@ -41,7 +41,7 @@ describe("IndexQuery pkPrefix", () => {
   it("should use both global pkPrefix and index pkPrefix", async () => {
     mockSend.mockResolvedValueOnce({ Items: [] });
     const index = (db as any).findByCategory("1");
-    await index.get();
+    await index.getAll();
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -71,7 +71,7 @@ describe("IndexQuery pkPrefix", () => {
     const mockSend2 = mockDocClient2.send;
     mockSend2.mockResolvedValueOnce({ Items: [] });
     const index2 = (db2 as any).findByCategory("1");
-    await index2.get();
+    await index2.getAll();
 
     expect(mockSend2).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -99,7 +99,7 @@ describe("IndexQuery pkPrefix", () => {
     const mockSend3 = mockDocClient3.send;
     mockSend3.mockResolvedValueOnce({ Items: [] });
     const index3 = (db3 as any).findByCategory("1");
-    await index3.get();
+    await index3.getAll();
 
     expect(mockSend3).toHaveBeenCalledWith(
         expect.objectContaining({

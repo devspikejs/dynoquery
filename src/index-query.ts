@@ -19,6 +19,7 @@ export class IndexQuery {
   protected skName: string;
   protected pkValue: string;
   protected skValue?: string;
+  protected lastEvaluatedKey: any = null;
 
   constructor(db: DynoQuery, config: IndexQueryConfig) {
     this.db = db;
@@ -43,16 +44,8 @@ export class IndexQuery {
     }
   }
 
-  async get<T = any>(skValueOrOptions?: string | { skValue?: string, limit?: number, scanIndexForward?: boolean }): Promise<T[]> {
-    let options: { skValue?: string, limit?: number, scanIndexForward?: boolean } = {};
-
-    if (typeof skValueOrOptions === 'string') {
-      options.skValue = skValueOrOptions;
-    } else if (typeof skValueOrOptions === 'object') {
-      options = skValueOrOptions;
-    } else if (this.skValue) {
-      options.skValue = this.skValue;
-    }
+  async getAll<T = any>(options?: { limit?: number, scanIndexForward?: boolean, exclusiveStartKey?: any, skValue?: string }): Promise<T[]> {
+    const finalSkValue = options?.skValue || this.skValue;
 
     let keyCondition = "#pk = :pk";
     const expressionAttributeNames: Record<string, string> = {
@@ -62,10 +55,10 @@ export class IndexQuery {
       ":pk": this.pkValue,
     };
 
-    if (options.skValue) {
+    if (finalSkValue) {
       keyCondition += " AND begins_with(#sk, :sk)";
       expressionAttributeNames["#sk"] = this.skName;
-      expressionAttributeValues[":sk"] = options.skValue;
+      expressionAttributeValues[":sk"] = finalSkValue;
     }
 
     const response = await this.db.query({
@@ -74,16 +67,22 @@ export class IndexQuery {
       KeyConditionExpression: keyCondition,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,
-      Limit: options.limit,
-      ScanIndexForward: options.scanIndexForward,
+      Limit: options?.limit,
+      ScanIndexForward: options?.scanIndexForward,
+      ExclusiveStartKey: options?.exclusiveStartKey,
     });
 
     const items = (response.Items || []) as any[];
-    return items.map(item => this.mapItemToModel(item));
+    const mappedItems = items.map(item => this.mapItemToModel(item));
+
+    this.lastEvaluatedKey = response.LastEvaluatedKey || null;
+
+    return mappedItems as T[];
   }
 
-  async getAll<T = any>(): Promise<T[]> {
-    return this.get<T>();
+  async get<T = any>(skValue?: string): Promise<T | null> {
+    const items = await this.getAll<T>({ limit: 1, skValue });
+    return items.length > 0 ? items[0] : null;
   }
 
   getPkValue(): string {
@@ -100,6 +99,10 @@ export class IndexQuery {
 
   getSkValue(): string | undefined {
     return this.skValue;
+  }
+
+  getLastEvaluatedKey(): any {
+    return this.lastEvaluatedKey;
   }
 
   private mapItemToModel(item: any): any {

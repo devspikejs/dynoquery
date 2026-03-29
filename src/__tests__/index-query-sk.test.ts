@@ -38,10 +38,10 @@ describe("IndexQuery with SK value", () => {
     expect(cat.getPkValue()).toBe("CAT#USER");
   });
 
-  it("should use stored skValue in get() if none provided", async () => {
+  it("should use stored skValue in getAll() if none provided", async () => {
     mockSend.mockResolvedValueOnce({ Items: [] });
     const cat = (db as any).findByCategory("USER", "1");
-    await cat.get();
+    await cat.getAll();
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -56,10 +56,10 @@ describe("IndexQuery with SK value", () => {
     );
   });
 
-  it("should override stored skValue if one is passed to get()", async () => {
+  it("should support skValue override in getAll() options", async () => {
     mockSend.mockResolvedValueOnce({ Items: [] });
     const cat = (db as any).findByCategory("USER", "1");
-    await cat.get("override");
+    await cat.getAll({ skValue: "override" });
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({

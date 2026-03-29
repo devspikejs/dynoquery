@@ -45,7 +45,7 @@ describe("IndexQuery", () => {
 
     mockSend.mockResolvedValueOnce({ Items: mockItems });
     const index = (db as any).findByCategory("CAT#1");
-    const results = await index.get();
+    const results = await index.getAll();
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -68,14 +68,21 @@ describe("IndexQuery", () => {
     const userPartition = results[0].getPartition();
     expect(userPartition.getPkValue()).toBe("USER#john");
 
+    // Test IndexQuery.get
+    // We need to mock the send call for the get() as well because it's a separate call
+    mockSend.mockResolvedValueOnce({ Items: [mockItems[0]] });
+    const singleUser = await index.get("100");
+    expect(singleUser.__model).toBe("User");
+    expect(singleUser.name).toBe("John");
+
     // Verify that the partition is already cached with the item data
     // This should not trigger another DB call
     const cachedData = await userPartition.get("METADATA");
     expect(cachedData.name).toBe("John");
-    expect(mockSend).toHaveBeenCalledTimes(1);
+    expect(mockSend).toHaveBeenCalledTimes(2); // One for getAll, one for get
   });
 
-  it("should support begins_with on SK as a string", async () => {
+  it("should support begins_with on SK via get", async () => {
     mockSend.mockResolvedValueOnce({ Items: [] });
     const index = (db as any).findByCategory("CAT#1");
     await index.get("1");
@@ -113,23 +120,16 @@ describe("IndexQuery", () => {
     );
   });
 
-  it("should support begins_with on SK in options object", async () => {
+  it("should support limit in options object", async () => {
     mockSend.mockResolvedValueOnce({ Items: [] });
     const index = (db as any).findByCategory("CAT#1");
-    await index.get({ skValue: "1" });
+    await index.getAll({ limit: 10 });
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.objectContaining({
-          KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :sk)",
-          ExpressionAttributeNames: expect.objectContaining({
-            "#pk": "GSI1PK",
-            "#sk": "GSI1SK"
-          }),
-          ExpressionAttributeValues: expect.objectContaining({
-            ":pk": "CAT#1",
-            ":sk": "1"
-          })
+          KeyConditionExpression: "#pk = :pk",
+          Limit: 10
         })
       })
     );
