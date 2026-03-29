@@ -11,121 +11,172 @@ npm install dynoquery
 ## Features
 
 - Basic CRUD operations (create, get, update, delete)
-- Optimized for **Single-Table Design**
-- Query and Scan support
+- Optimized for **Single-Table Design** (Partitions and GSIs)
+- Automatic result mapping to models
+- Built-in caching for partition instances
 - TypeScript support
 
-## Usage
+## Quick Start (Basic Usage)
+
+First, initialize the client with your table name.
 
 ```typescript
 import { DynoQuery } from 'dynoquery';
 
 const db = new DynoQuery({
   region: 'us-east-1',
-  tableName: 'MyTable', // Define default table for single-table structure
-  pkName: 'PK', // Optional: Custom attribute name for Partition Key (default: 'PK')
-  skName: 'SK', // Optional: Custom attribute name for Sort Key (default: 'SK')
-  pkPrefix: 'TENANT#A#', // Optional: Global prefix for all partitions (useful for multitenancy)
-  // optional endpoint for local development
-  // endpoint: 'http://localhost:8000'
+  tableName: 'MyTable'
+});
+```
+
+### 1. Working with Partitions (Models)
+
+Define your models to handle different types of data within your single table.
+
+```typescript
+const db = new DynoQuery({
+  region: 'us-east-1',
+  tableName: 'MyTable',
   models: {
-    User: { pkPrefix: 'USER#' }, // TENANT#A#USER#
-  },
-  findBy: {
-    //  TENANT#A#CAT#
-    Category: { indexName: 'GSI1', pkPrefix: 'CAT#' }, // pkName defaults to GSI1PK, skName defaults to GSI1SK
-    Date: { indexName: 'GSI2', pkPrefix: 'DATE#' }
+    User: { pkPrefix: 'USER#' }, // Resulting PK: USER#<id>
+    Product: { pkPrefix: 'PROD#' }
   }
 });
 
-async function example() {
-  // Use registered partition
-  // Resulting PK: TENANT#A#USER#john@example.com
+async function userExample() {
   const john = db.User('john@example.com');
   
-  // Use registered index
-  // Resulting GSI1PK: TENANT#A#CAT#1
-  const categories = db.findByCategory('1');
-  const items = await categories.getAll({ limit: 100 });
-  const allItems = await categories.getAll();
-  
-  // Index results are automatically mapped to models based on PK prefix
-  items.forEach(item => {
-    if (item.__model === 'User') {
-      console.log('Found user:', item.name);
-      // You can also get a Partition instance for this item
-      const userPartition = item.getPartition();
-    }
-  });
-  
-  // Load all data for this partition (optional, but good for multiple reads)
-  const allJohnData = await john.getAll();
-  
-  // john.get() loads data immediately (using cache if loaded)
-  const userMetadata = await john.get('METADATA');
-  console.log(userMetadata);
-
-  // Create an item through partition
+  // Create an item (SK: PROFILE)
   await john.create('PROFILE', { name: 'John Doe', email: 'john@example.com' });
   
-  // Resulting GSI1PK: TENANT#A#CAT#USER
-  const cat = db.findByCategory('USER', '1');
-  const date = db.findByDate('2026-10-11', '2');
-  console.log(cat.getSkValue()); // '1'
-  await john.create('PROFILE', { 
-    name: 'John Doe', 
-    email: 'john@example.com', 
-  }, [cat, date]);
+  // Get an item (uses cache if already loaded)
+  const profile = await john.get('PROFILE');
+  console.log(profile.name); // 'John Doe'
 
-  // Update the item (updates both DB and partition cache)
+  // Update an item (partial update)
   await john.update('PROFILE', { theme: 'dark' });
 
   // Delete an item
-  await john.delete('METADATA');
+  await john.delete('PROFILE');
+  
+  // Fetch all items in this partition
+  const allData = await john.getAll();
+}
+```
 
-  // Advanced Partition usage (Subclassing)
-  class UserPartition extends Partition {
-    constructor(db: DynoQuery, email: string) {
-      super(db, { pkPrefix: 'USER#' }, email);
-    }
+### 2. Global Secondary Indexes (findBy)
+
+Use `findBy` to query your GSIs easily.
+
+```typescript
+const db = new DynoQuery({
+  region: 'us-east-1',
+  tableName: 'MyTable',
+  models: {
+    Product: { pkPrefix: 'PROD#' }
+  },
+  findBy: {
+    Category: { indexName: 'GSI1', pkPrefix: 'CAT#' }, // pkName defaults to GSI1PK, skName defaults to GSI1SK
   }
+});
 
-  const user2 = new UserPartition(db, 'jane@example.com');
-  const data2 = await user2.get('METADATA');
-  console.log(data2);
+async function indexExample() {
+  // Query by Category PK: CAT#ELECTRONICS
+  const electronics = db.findByCategory('ELECTRONICS');
+  
+  // Get all items in this category
+  const items = await electronics.getAll();
+  
+  // If results match a registered model prefix, they are automatically mapped
+  items.forEach(item => {
+    if (item.__model === 'Product') {
+      const productPartition = item.getPartition(); // Returns a Partition instance
+    }
+  });
+}
+```
+
+### 3. Creating Items with GSI Support
+
+You can pass index queries directly to `create()` to automatically populate GSI attributes.
+
+```typescript
+const electronics = db.findByCategory('ELECTRONICS', 'RANK#1');
+
+// This will automatically set GSI1PK='CAT#ELECTRONICS' and GSI1SK='RANK#1'
+await db.Product('p123').create('INFO', { 
+  name: 'Gaming Mouse',
+  price: 50
+}, [electronics]);
+```
+
+## Optional Configuration Parameters
+
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `pkName` | `string` | `'PK'` | Custom attribute name for Partition Key. |
+| `skName` | `string` | `'SK'` | Custom attribute name for Sort Key. |
+| `pkPrefix` | `string` | `''` | Global prefix for all partitions (useful for multitenancy, e.g., `TENANT#A#`). |
+| `endpoint` | `string` | - | Optional endpoint for local development (e.g., `http://localhost:8000`). |
+| `credentials` | `object` | - | Custom AWS credentials (`{ accessKeyId, secretAccessKey, sessionToken? }`). |
+
+### Example with Optional Parameters
+
+```typescript
+const db = new DynoQuery({
+  region: 'us-east-1',
+  tableName: 'MyTable',
+  pkName: 'PartitionKey', // Custom PK name
+  skName: 'SortKey',      // Custom SK name
+  pkPrefix: 'TENANT#A#',   // Global prefix for multitenancy
+  endpoint: 'http://localhost:8000', // For local DynamoDB
+  credentials: {
+    accessKeyId: 'MY_ACCESS_KEY',
+    secretAccessKey: 'MY_SECRET_KEY'
+  }
+});
+```
+
+## Advanced Usage
+
+### Pagination
+
+Both `Partition.getAll()` and `IndexQuery.getAll()` support pagination.
+
+```typescript
+const index = db.findByCategory('ELECTRONICS');
+const items = await index.getAll({ limit: 10 });
+
+const token = index.getLastEvaluatedKey();
+if (token) {
+  // Fetch next page
+  const nextItems = await index.getAll({ limit: 10, exclusiveStartKey: token });
 }
 ```
 
 ## API Reference
 
 ### DynoQuery
-The main client for interacting with DynamoDB.
-- `create(params)`: Put an item.
-- `get(params)`: Get an item.
-- `update(params)`: Update an item.
-- `delete(params)`: Delete an item.
-- `query(params)`: Query items.
-- `scan(params)`: Scan items.
+- `create(params)`: Low-level PutCommand wrapper.
+- `get(params)`: Low-level GetCommand wrapper.
+- `update(params)`: Low-level UpdateCommand wrapper.
+- `delete(params)`: Low-level DeleteCommand wrapper.
+- `query(params)`: Low-level QueryCommand wrapper.
+- `scan(params)`: Low-level ScanCommand wrapper.
 
 ### Partition
-A way to manage data within a specific partition.
-- `getPkValue()`: Returns the generated partition key value.
-- `get(sk)`: Fetches data for a specific sort key (returns a Promise).
-- `getAll(options?)`: Fetches items in the partition and caches them. Supports optional `limit` and `exclusiveStartKey`. If results are paginated, use `getLastEvaluatedKey()` to retrieve the pagination token. The partition is only marked as fully loaded (`isLoaded`) if a full result set is returned (no `exclusiveStartKey` provided and no pagination token returned).
-- `getLastEvaluatedKey()`: Returns the `LastEvaluatedKey` from the last `getAll()` call.
-- `create(sk, data, indices?)`: Creates an item in the partition. If `indices` (array of `IndexQuery`) are provided, it automatically adds the index PK and SK to the item.
-- `update(sk, data)`: Updates an existing item (partial update).
+- `get(sk)`: Fetches data for a specific SK (returns a Promise).
+- `getAll(options?)`: Fetches items in the partition. Options: `{ limit, exclusiveStartKey }`.
+- `create(sk, data, indices?)`: Creates an item. `indices` is an array of `IndexQuery` for GSI population.
+- `update(sk, data)`: Partial update of an item.
 - `delete(sk)`: Deletes an item.
 - `deleteAll()`: Deletes all items in the partition.
+- `getLastEvaluatedKey()`: Returns the pagination token from the last `getAll()`.
 
 ### IndexQuery
-A way to query Global Secondary Indexes.
-- `getPkValue()`: Returns the generated partition key value for this index.
-- `getSkValue()`: Returns the sort key value if it was provided when calling the index query method.
-- `get(skValue?)`: Get a single item from the index. If `skValue` was provided when the `IndexQuery` was created, it will be used as the default if no `skValue` is passed here. Returns a Promise of the item or null.
-- `getAll(options?)`: Query items in the index. Supports an options object with `limit`, `scanIndexForward`, `exclusiveStartKey`, and `skValue`. If `skValue` is provided in options, it overrides any `skValue` provided at construction. If results are paginated, use `getLastEvaluatedKey()` to retrieve the pagination token.
-- `getLastEvaluatedKey()`: Returns the `LastEvaluatedKey` from the last `getAll()` call.
-- Automatically identifies the model name in results using `__model` (based on registered models) and provides `getPartition()` helper.
+- `get(skValue?)`: Get a single item from the index.
+- `getAll(options?)`: Query index. Options: `{ limit, scanIndexForward, exclusiveStartKey, skValue }`.
+- `getLastEvaluatedKey()`: Returns the pagination token from the last `getAll()`.
 
 ## License
 
