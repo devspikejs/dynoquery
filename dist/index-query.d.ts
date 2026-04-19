@@ -23,6 +23,9 @@ export declare class IndexQuery {
         scanIndexForward?: boolean;
         exclusiveStartKey?: any;
         skValue?: string;
+        filterExpression?: string;
+        expressionAttributeNames?: Record<string, string>;
+        expressionAttributeValues?: Record<string, any>;
     }): Promise<T[]>;
     get<T = any>(skValue?: string): Promise<T | null>;
     getPkValue(): string;

@@ -60,12 +60,9 @@ class Partition {
             const response = yield this.db.query({
                 TableName: this.tableName,
                 KeyConditionExpression: "#pk = :pk",
-                ExpressionAttributeNames: {
-                    "#pk": this.pkName,
-                },
-                ExpressionAttributeValues: {
-                    ":pk": this.pkValue,
-                },
+                FilterExpression: options === null || options === void 0 ? void 0 : options.filterExpression,
+                ExpressionAttributeNames: Object.assign({ "#pk": this.pkName }, options === null || options === void 0 ? void 0 : options.expressionAttributeNames),
+                ExpressionAttributeValues: Object.assign({ ":pk": this.pkValue }, options === null || options === void 0 ? void 0 : options.expressionAttributeValues),
                 Limit: options === null || options === void 0 ? void 0 : options.limit,
                 ExclusiveStartKey: options === null || options === void 0 ? void 0 : options.exclusiveStartKey,
             });

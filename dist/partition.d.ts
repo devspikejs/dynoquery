@@ -22,6 +22,9 @@ export declare class Partition {
     getAll<T = any>(options?: {
         limit?: number;
         exclusiveStartKey?: any;
+        filterExpression?: string;
+        expressionAttributeNames?: Record<string, string>;
+        expressionAttributeValues?: Record<string, any>;
     }): Promise<T[]>;
     /**
      * Create an item in this partition.

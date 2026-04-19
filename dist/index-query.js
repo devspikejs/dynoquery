@@ -35,12 +35,8 @@ class IndexQuery {
         return __awaiter(this, void 0, void 0, function* () {
             const finalSkValue = (options === null || options === void 0 ? void 0 : options.skValue) || this.skValue;
             let keyCondition = "#pk = :pk";
-            const expressionAttributeNames = {
-                "#pk": this.pkName,
-            };
-            const expressionAttributeValues = {
-                ":pk": this.pkValue,
-            };
+            const expressionAttributeNames = Object.assign({ "#pk": this.pkName }, options === null || options === void 0 ? void 0 : options.expressionAttributeNames);
+            const expressionAttributeValues = Object.assign({ ":pk": this.pkValue }, options === null || options === void 0 ? void 0 : options.expressionAttributeValues);
             if (finalSkValue) {
                 keyCondition += " AND begins_with(#sk, :sk)";
                 expressionAttributeNames["#sk"] = this.skName;
@@ -50,6 +46,7 @@ class IndexQuery {
                 TableName: this.tableName,
                 IndexName: this.indexName,
                 KeyConditionExpression: keyCondition,
+                FilterExpression: options === null || options === void 0 ? void 0 : options.filterExpression,
                 ExpressionAttributeNames: expressionAttributeNames,
                 ExpressionAttributeValues: expressionAttributeValues,
                 Limit: options === null || options === void 0 ? void 0 : options.limit,
