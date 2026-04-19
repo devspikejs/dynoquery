@@ -44,15 +44,25 @@ export class IndexQuery {
     }
   }
 
-  async getAll<T = any>(options?: { limit?: number, scanIndexForward?: boolean, exclusiveStartKey?: any, skValue?: string }): Promise<T[]> {
+  async getAll<T = any>(options?: {
+    limit?: number;
+    scanIndexForward?: boolean;
+    exclusiveStartKey?: any;
+    skValue?: string;
+    filterExpression?: string;
+    expressionAttributeNames?: Record<string, string>;
+    expressionAttributeValues?: Record<string, any>;
+  }): Promise<T[]> {
     const finalSkValue = options?.skValue || this.skValue;
 
     let keyCondition = "#pk = :pk";
     const expressionAttributeNames: Record<string, string> = {
       "#pk": this.pkName,
+      ...options?.expressionAttributeNames,
     };
     const expressionAttributeValues: Record<string, any> = {
       ":pk": this.pkValue,
+      ...options?.expressionAttributeValues,
     };
 
     if (finalSkValue) {
@@ -65,6 +75,7 @@ export class IndexQuery {
       TableName: this.tableName,
       IndexName: this.indexName,
       KeyConditionExpression: keyCondition,
+      FilterExpression: options?.filterExpression,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,
       Limit: options?.limit,

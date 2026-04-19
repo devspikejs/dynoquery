@@ -65,15 +65,24 @@ export class Partition {
    * Fetches all items in the partition and caches them.
    * Returns the data and caches it.
    */
-  async getAll<T = any>(options?: { limit?: number, exclusiveStartKey?: any }): Promise<T[]> {
+  async getAll<T = any>(options?: {
+    limit?: number;
+    exclusiveStartKey?: any;
+    filterExpression?: string;
+    expressionAttributeNames?: Record<string, string>;
+    expressionAttributeValues?: Record<string, any>;
+  }): Promise<T[]> {
     const response = await this.db.query({
       TableName: this.tableName,
       KeyConditionExpression: "#pk = :pk",
+      FilterExpression: options?.filterExpression,
       ExpressionAttributeNames: {
         "#pk": this.pkName,
+        ...options?.expressionAttributeNames,
       },
       ExpressionAttributeValues: {
         ":pk": this.pkValue,
+        ...options?.expressionAttributeValues,
       },
       Limit: options?.limit,
       ExclusiveStartKey: options?.exclusiveStartKey,
