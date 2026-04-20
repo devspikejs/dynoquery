@@ -29,11 +29,11 @@ export declare class Partition {
     /**
      * Create an item in this partition.
      */
-    create<T = any>(sk: string, data: T, indices?: IndexQuery[]): Promise<void>;
+    create<T = any>(sk: string, data: T, indices?: IndexQuery[]): Promise<T>;
     /**
      * Update an existing item in this partition.
      */
-    update<T = any>(sk: string, data: Partial<T>): Promise<void>;
+    update<T = any>(sk: string, data: Partial<T>): Promise<T>;
     /**
      * Delete an item by its SK within this partition.
      */

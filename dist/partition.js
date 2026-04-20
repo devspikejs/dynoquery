@@ -98,6 +98,7 @@ class Partition {
                 Item: item,
             });
             this.cache[sk] = item;
+            return item;
         });
     }
     /**
@@ -107,7 +108,7 @@ class Partition {
         return __awaiter(this, void 0, void 0, function* () {
             const current = (yield this.get(sk)) || {};
             const updated = Object.assign(Object.assign({}, current), data);
-            yield this.create(sk, updated);
+            return yield this.create(sk, updated);
         });
     }
     /**
