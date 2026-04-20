@@ -107,7 +107,7 @@ export class Partition {
   /**
    * Create an item in this partition.
    */
-  async create<T = any>(sk: string, data: T, indices?: IndexQuery[]): Promise<void> {
+  async create<T = any>(sk: string, data: T, indices?: IndexQuery[]): Promise<T> {
     const item: any = {
       [this.pkName]: this.pkValue,
       [this.skName]: sk,
@@ -128,15 +128,16 @@ export class Partition {
       Item: item,
     });
     this.cache[sk] = item;
+    return item as T;
   }
 
   /**
    * Update an existing item in this partition.
    */
-  async update<T = any>(sk: string, data: Partial<T>): Promise<void> {
+  async update<T = any>(sk: string, data: Partial<T>): Promise<T> {
     const current = await this.get<T>(sk) || ({} as T);
     const updated = { ...current, ...data } as T;
-    await this.create(sk, updated);
+    return await this.create(sk, updated);
   }
 
   /**

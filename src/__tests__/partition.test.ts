@@ -81,7 +81,13 @@ describe("Partition", () => {
   it("should allow creating an item directly from partition and update cache", async () => {
     mockSend.mockResolvedValue({}); // default response for all calls
 
-    await userPartition.create("PROFILE", { name: "John Doe" });
+    const createdItem = await userPartition.create("PROFILE", { name: "John Doe" });
+
+    expect(createdItem).toEqual({
+      PK: "USER#john@example.com",
+      SK: "PROFILE",
+      name: "John Doe",
+    });
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -113,7 +119,14 @@ describe("Partition", () => {
       .mockResolvedValueOnce({ Item: { PK: "USER#john@example.com", SK: "PROFILE", name: "John" } }) // get
       .mockResolvedValueOnce({}); // create
 
-    await userPartition.update("PROFILE", { theme: "dark" });
+    const updatedItem = await userPartition.update("PROFILE", { theme: "dark" });
+
+    expect(updatedItem).toEqual({
+      PK: "USER#john@example.com",
+      SK: "PROFILE",
+      name: "John",
+      theme: "dark",
+    });
 
     const cachedData = await userPartition.get("PROFILE");
     expect(cachedData).toEqual({
