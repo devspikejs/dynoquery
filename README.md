@@ -239,12 +239,12 @@ if (token) {
 - `findBy[IndexName](id, skValue?)`: Returns an `IndexQuery` instance.
 
 ### Partition
-- `get(sk)`: Fetches data for a specific Sort Key value (returns a Promise).
+- `get(skValue)`: Fetches data for a specific Sort Key value (returns a Promise).
 - `getAll(options?)`: Fetches items in the partition. Options: `{ limit, exclusiveStartKey }`.
-- `create(sk, data, indices?)`: Creates an item. `indices` is an array of `IndexQuery` for GSI population.
-- `update(sk, data)`: Partial update of an item.
-- `delete(sk)`: Deletes an item.
-- `draft(sk, data?)`: Returns an `Item` object initialized with `data` (optional).
+- `create(skValue, data, indices?)`: Creates an item. `indices` is an array of `IndexQuery` for GSI population.
+- `update(skValue, data)`: Partial update of an item.
+- `delete(skValue)`: Deletes an item.
+- `draft(skValue, data?)`: Returns an `Item` object initialized with `data` (optional).
 - `deleteAll()`: Deletes all items in the partition.
 - `getLastEvaluatedKey()`: Returns the pagination token from the last `getAll()`.
 

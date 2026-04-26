@@ -156,10 +156,10 @@ export class Partition {
   /**
    * Create an item in this partition.
    */
-  async create<T = any>(sk: string, data: T, indices?: IndexQuery[]): Promise<T> {
+  async create<T = any>(skValue: string, data: T, indices?: IndexQuery[]): Promise<T> {
     const item: any = {
       [this.pkName]: this.pkValue,
-      [this.skName]: sk,
+      [this.skName]: skValue,
       ...data,
     };
 
@@ -176,16 +176,16 @@ export class Partition {
       TableName: this.tableName,
       Item: item,
     });
-    this.cache[sk] = item;
-    return new Item(this, sk, item) as any;
+    this.cache[skValue] = item;
+    return new Item(this, skValue, item) as any;
   }
 
   /**
    * Internal method to get raw data for a specific SK.
    */
-  private async _getRaw<T = any>(sk: string): Promise<T | null> {
-    if (this.cache[sk] !== undefined) {
-      return (this.cache[sk] as T) || null;
+  private async _getRaw<T = any>(skValue: string): Promise<T | null> {
+    if (this.cache[skValue] !== undefined) {
+      return (this.cache[skValue] as T) || null;
     }
 
     if (this.isLoaded) {
@@ -196,13 +196,13 @@ export class Partition {
       TableName: this.tableName,
       Key: {
         [this.pkName]: this.pkValue,
-        [this.skName]: sk,
+        [this.skName]: skValue,
       },
     });
 
     const data = (response.Item as unknown as T) || null;
     if (data) {
-      this.cache[sk] = data;
+      this.cache[skValue] = data;
     }
     return data;
   }
@@ -210,32 +210,32 @@ export class Partition {
   /**
    * Update an existing item in this partition.
    */
-  async update<T = any>(sk: string, data: Partial<T>, indices?: IndexQuery[]): Promise<T> {
-    const current = await this._getRaw(sk) || {};
+  async update<T = any>(skValue: string, data: Partial<T>, indices?: IndexQuery[]): Promise<T> {
+    const current = await this._getRaw(skValue) || {};
     const updated = { ...current, ...data } as T;
-    return await this.create(sk, updated, indices);
+    return await this.create(skValue, updated, indices);
   }
 
   /**
    * Delete an item by its SK within this partition.
    */
-  async delete(sk: string): Promise<void> {
+  async delete(skValue: string): Promise<void> {
     await this.db.delete({
       TableName: this.tableName,
       Key: {
         [this.pkName]: this.pkValue,
-        [this.skName]: sk,
+        [this.skName]: skValue,
       },
     });
-    delete this.cache[sk];
+    delete this.cache[skValue];
   }
 
   /**
    * Get data for a specific SK and return it wrapped in a Item object.
    */
-  async get<T = any>(sk: string): Promise<T | null> {
-    const data = await this._getRaw<T>(sk);
-    return data ? (new Item(this, sk, data) as any) : null;
+  async get<T = any>(skValue: string): Promise<T | null> {
+    const data = await this._getRaw<T>(skValue);
+    return data ? (new Item(this, skValue, data) as any) : null;
   }
 
   /**
@@ -243,8 +243,8 @@ export class Partition {
    * @param sk The sort key value
    * @param data Initial data for the row
    */
-  draft<T = any>(sk: string, data: any = {}): T {
-    return new Item(this, sk, data) as any;
+  draft<T = any>(skValue: string, data: any = {}): T {
+    return new Item(this, skValue, data) as any;
   }
 
 

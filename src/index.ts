@@ -67,10 +67,10 @@ export class DynoQuery {
     if (models) {
       this.registeredModels = models;
       Object.entries(models).forEach(([name, def]) => {
-        this[name] = (id: string, sk?: string) => {
+        this[name] = (id: string, skValue?: string) => {
           const partition = new Partition(this, { pkPrefix: this.globalPkPrefix + def.pkPrefix }, id);
-          if (sk) {
-            return partition.draft(sk);
+          if (skValue) {
+            return partition.draft(skValue);
           }
           return partition;
         };
