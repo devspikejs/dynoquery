@@ -1,4 +1,6 @@
 import { PutCommandInput, GetCommandInput, UpdateCommandInput, DeleteCommandInput, QueryCommandInput, ScanCommandInput } from "@aws-sdk/lib-dynamodb";
+import { Item } from "./partition";
+import { IndexQuery } from "./index-query";
 export interface DynoQueryConfig {
     tableName?: string;
     pkName?: string;
@@ -55,6 +57,18 @@ export declare class DynoQuery {
      * Scan the table or index for items.
      */
     scan(params: ScanCommandInput): Promise<import("@aws-sdk/lib-dynamodb").ScanCommandOutput>;
+    /**
+     * Batch write items to the table.
+     */
+    batchWrite(items: Item[]): Promise<Item[]>;
+    /**
+     * Batch get items from the table.
+     */
+    batchRead(items: (Item | IndexQuery)[]): Promise<any[]>;
+    /**
+     * Maps a raw DynamoDB item to a Model Item if it matches a registered model.
+     */
+    mapItemToModelItem(item: any): any;
     getTableName(): string | undefined;
     getPkPrefix(): string;
     getPkName(): string;

@@ -33,5 +33,4 @@ export declare class IndexQuery {
     getSkName(): string;
     getSkValue(): string | undefined;
     getLastEvaluatedKey(): any;
-    private mapItemToModelItem;
 }

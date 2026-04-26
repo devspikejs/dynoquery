@@ -13,6 +13,8 @@ exports.Partition = exports.Item = void 0;
 class Item {
     constructor(partition, skValue, data) {
         this._indices = [];
+        this._partition = partition;
+        this._skValue = skValue;
         Object.assign(this, data);
         const self = this;
         return new Proxy(this, {
@@ -21,7 +23,9 @@ class Item {
                     return () => {
                         const dataToSave = {};
                         for (const key in target) {
-                            if (Object.prototype.hasOwnProperty.call(target, key) && key !== "_indices" && typeof target[key] !== 'function') {
+                            if (Object.prototype.hasOwnProperty.call(target, key) &&
+                                !["_indices", "_partition", "_skValue"].includes(key) &&
+                                typeof target[key] !== "function") {
                                 dataToSave[key] = target[key];
                             }
                         }
@@ -50,6 +54,12 @@ class Item {
                         }
                         return receiver;
                     };
+                }
+                if (prop === "getPartition") {
+                    return () => partition;
+                }
+                if (prop === "getSkValue") {
+                    return () => skValue;
                 }
                 return Reflect.get(target, prop, receiver);
             },
@@ -214,6 +224,9 @@ class Partition {
      */
     draft(skValue, data = {}) {
         return new Item(this, skValue, data);
+    }
+    getTableName() {
+        return this.tableName || "";
     }
     getPkValue() {
         return this.pkValue;

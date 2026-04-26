@@ -38,6 +38,7 @@ exports.Item = exports.DynoQuery = void 0;
 const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
 const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
 const partition_1 = require("./partition");
+const index_query_1 = require("./index-query");
 class DynoQuery {
     constructor(config = {}) {
         this.registeredModels = {};
@@ -152,6 +153,137 @@ class DynoQuery {
             const command = new lib_dynamodb_1.ScanCommand(params);
             return yield this.docClient.send(command);
         });
+    }
+    /**
+     * Batch write items to the table.
+     */
+    batchWrite(items) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const tableGroups = {};
+            items.forEach((item) => {
+                const partition = item.getPartition();
+                const tableName = partition.getTableName();
+                const skValue = item.getSkValue();
+                if (!tableGroups[tableName]) {
+                    tableGroups[tableName] = [];
+                }
+                const dataToSave = {};
+                for (const key in item) {
+                    if (Object.prototype.hasOwnProperty.call(item, key) &&
+                        !["_indices", "_partition", "_skValue"].includes(key) &&
+                        typeof item[key] !== "function") {
+                        dataToSave[key] = item[key];
+                    }
+                }
+                // Ensure PK and SK are in the data
+                dataToSave[this.pkName] = partition.getPkValue();
+                dataToSave[this.skName] = skValue;
+                tableGroups[tableName].push({
+                    PutRequest: {
+                        Item: dataToSave,
+                    },
+                });
+            });
+            const results = [];
+            const tableNames = Object.keys(tableGroups);
+            for (const tableName of tableNames) {
+                const requests = tableGroups[tableName];
+                // Chunk requests into 25
+                for (let i = 0; i < requests.length; i += 25) {
+                    const chunk = requests.slice(i, i + 25);
+                    yield this.docClient.send(new lib_dynamodb_1.BatchWriteCommand({
+                        RequestItems: {
+                            [tableName]: chunk,
+                        },
+                    }));
+                }
+            }
+            return items;
+        });
+    }
+    /**
+     * Batch get items from the table.
+     */
+    batchRead(items) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const tableGroups = {};
+            const requestMap = {};
+            items.forEach((item) => {
+                let tableName;
+                let pkValue;
+                let skValue;
+                if (item instanceof index_query_1.IndexQuery) {
+                    tableName = item.tableName;
+                    pkValue = item.getPkValue();
+                    skValue = item.getSkValue() || "";
+                }
+                else {
+                    const partition = item.getPartition();
+                    tableName = partition.getTableName();
+                    pkValue = partition.getPkValue();
+                    skValue = item.getSkValue();
+                }
+                if (!tableGroups[tableName]) {
+                    tableGroups[tableName] = [];
+                }
+                const key = {
+                    [this.pkName]: pkValue,
+                    [this.skName]: skValue,
+                };
+                tableGroups[tableName].push(key);
+                const requestKey = `${tableName}|${pkValue}|${skValue}`;
+                requestMap[requestKey] = item;
+            });
+            const allItems = [];
+            const tableNames = Object.keys(tableGroups);
+            for (const tableName of tableNames) {
+                const keys = tableGroups[tableName];
+                for (let i = 0; i < keys.length; i += 100) {
+                    const chunk = keys.slice(i, i + 100);
+                    const response = yield this.docClient.send(new lib_dynamodb_1.BatchGetCommand({
+                        RequestItems: {
+                            [tableName]: {
+                                Keys: chunk,
+                            },
+                        },
+                    }));
+                    if (response.Responses && response.Responses[tableName]) {
+                        const items = response.Responses[tableName];
+                        items.forEach((item) => {
+                            const mappedItem = this.mapItemToModelItem(item);
+                            allItems.push(mappedItem);
+                        });
+                    }
+                }
+            }
+            return allItems;
+        });
+    }
+    /**
+     * Maps a raw DynamoDB item to a Model Item if it matches a registered model.
+     */
+    mapItemToModelItem(item) {
+        const pkValue = item[this.pkName];
+        if (!pkValue)
+            return item;
+        for (const [name, def] of Object.entries(this.registeredModels)) {
+            const fullPrefix = this.globalPkPrefix + def.pkPrefix;
+            if (pkValue.startsWith(fullPrefix)) {
+                const id = pkValue.substring(fullPrefix.length);
+                const partition = new partition_1.Partition(this, { pkPrefix: fullPrefix }, id);
+                const skValue = item[this.skName];
+                if (skValue) {
+                    partition["cache"][skValue] = item;
+                }
+                // Add metadata to the item
+                item.__model = name;
+                item.getPartition = () => partition;
+                if (skValue) {
+                    return new partition_1.Item(partition, skValue, item);
+                }
+            }
+        }
+        return item;
     }
     getTableName() {
         return this.defaultTableName;

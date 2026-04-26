@@ -8,6 +8,8 @@ export interface PartitionConfig {
 export declare class Item {
     [key: string]: any;
     private _indices;
+    private _partition;
+    private _skValue;
     constructor(partition: Partition, skValue: string, data: any);
 }
 export declare class Partition {
@@ -57,6 +59,7 @@ export declare class Partition {
      * @param data Initial data for the row
      */
     draft<T = any>(skValue: string, data?: any): T;
+    getTableName(): string;
     getPkValue(): string;
     getLastEvaluatedKey(): any;
     /**
