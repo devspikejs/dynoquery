@@ -89,6 +89,38 @@ describe("Batch Operations", () => {
 
       expect(mockSend).toHaveBeenCalledTimes(2); // 25 + 5
     });
+
+    it("should support draftDelete and send DeleteRequest", async () => {
+      const user = db.User("john");
+      const itemToDelete = user.draftDelete("METADATA");
+
+      // Verify internal structure as per requirement
+      expect(itemToDelete._toBeDeleted).toBe(true);
+      expect(itemToDelete.toBeDeleted()).toBe(true);
+
+      mockSend.mockResolvedValue({});
+
+      await db.batchWrite([itemToDelete]);
+
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: {
+            RequestItems: {
+              TestTable: [
+                {
+                  DeleteRequest: {
+                    Key: {
+                      PK: "USER#john",
+                      SK: "METADATA",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        })
+      );
+    });
   });
 
   describe("batchRead", () => {
