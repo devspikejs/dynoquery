@@ -41,7 +41,8 @@ describe("Filters in getAll()", () => {
         expressionAttributeValues: { ":status": "active" },
       });
 
-      expect(result).toEqual(mockItems);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject(mockItems[0]);
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           input: expect.objectContaining({

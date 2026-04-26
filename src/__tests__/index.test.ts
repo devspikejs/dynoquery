@@ -59,7 +59,7 @@ describe('DynoQuery', () => {
     const params = {
       TableName: 'TestTable',
       Key: { id: '1' },
-      UpdateExpression: 'set #n = :n',
+      UpdateExpression: 'item #n = :n',
       ExpressionAttributeNames: { '#n': 'name' },
       ExpressionAttributeValues: { ':n': 'Updated' },
     };

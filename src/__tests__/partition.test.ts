@@ -42,7 +42,7 @@ describe("Partition", () => {
         }),
       })
     );
-    expect(data).toEqual({ name: "John", SK: "PROFILE" });
+    expect(data).toMatchObject({ name: "John", SK: "PROFILE" });
   });
 
   it("should getAll all partition data using getAll() and then return from cache", async () => {
@@ -54,7 +54,9 @@ describe("Partition", () => {
 
     const result = await userPartition.getAll();
 
-    expect(result).toEqual(mockItems);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject(mockItems[0]);
+    expect(result[1]).toMatchObject(mockItems[1]);
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.objectContaining({
@@ -73,8 +75,8 @@ describe("Partition", () => {
     const metadata = await userPartition.get("METADATA");
     const profile = await userPartition.get("PROFILE");
 
-    expect(metadata).toEqual(mockItems[0]);
-    expect(profile).toEqual(mockItems[1]);
+    expect(metadata).toMatchObject(mockItems[0]);
+    expect(profile).toMatchObject(mockItems[1]);
     expect(mockSend).toHaveBeenCalledTimes(1);
   });
 
@@ -83,7 +85,7 @@ describe("Partition", () => {
 
     const createdItem = await userPartition.create("PROFILE", { name: "John Doe" });
 
-    expect(createdItem).toEqual({
+    expect(createdItem).toMatchObject({
       PK: "USER#john@example.com",
       SK: "PROFILE",
       name: "John Doe",
@@ -103,7 +105,7 @@ describe("Partition", () => {
 
     // Verify cache update
     const cachedData = await userPartition.get("PROFILE");
-    expect(cachedData).toEqual({
+    expect(cachedData).toMatchObject({
       PK: "USER#john@example.com",
       SK: "PROFILE",
       name: "John Doe",
@@ -121,7 +123,7 @@ describe("Partition", () => {
 
     const updatedItem = await userPartition.update("PROFILE", { theme: "dark" });
 
-    expect(updatedItem).toEqual({
+    expect(updatedItem).toMatchObject({
       PK: "USER#john@example.com",
       SK: "PROFILE",
       name: "John",
@@ -129,7 +131,7 @@ describe("Partition", () => {
     });
 
     const cachedData = await userPartition.get("PROFILE");
-    expect(cachedData).toEqual({
+    expect(cachedData).toMatchObject({
       PK: "USER#john@example.com",
       SK: "PROFILE",
       name: "John",

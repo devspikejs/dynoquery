@@ -7,6 +7,55 @@ export interface PartitionConfig {
   pkPrefix?: string;
 }
 
+export class Item {
+  [key: string]: any;
+  private _indices: IndexQuery[] = [];
+
+  constructor(partition: Partition, skValue: string, data: any) {
+    Object.assign(this, data);
+
+    const self = this;
+    return new Proxy(this, {
+      get(target, prop, receiver) {
+        if (prop === "save") {
+          return () => {
+            const dataToSave: any = {};
+            for (const key in target) {
+              if (Object.prototype.hasOwnProperty.call(target, key) && key !== "_indices" && typeof target[key] !== 'function') {
+                dataToSave[key] = target[key];
+              }
+            }
+            return partition.update(skValue, dataToSave, self._indices);
+          };
+        }
+        if (prop === "create") {
+          return (data?: any, indices?: IndexQuery[]) => {
+            const dataToSave = data || {};
+            const finalIndices = indices || self._indices;
+            return partition.create(skValue, dataToSave, finalIndices);
+          };
+        }
+        if (prop === "update") {
+          return (data: any, indices?: IndexQuery[]) => {
+            return partition.update(skValue, data, indices);
+          };
+        }
+        if (prop === "setIndex") {
+          return (indexObj: IndexQuery | IndexQuery[]) => {
+            if (Array.isArray(indexObj)) {
+              self._indices.push(...indexObj);
+            } else {
+              self._indices.push(indexObj);
+            }
+            return receiver;
+          };
+        }
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+  }
+}
+
 export class Partition {
   protected db: DynoQuery;
   protected tableName?: string;
@@ -101,7 +150,7 @@ export class Partition {
 
     this.lastEvaluatedKey = response.LastEvaluatedKey || null;
 
-    return items;
+    return items.map((item: any) => new Item(this, item[this.skName], item) as any);
   }
 
   /**
@@ -128,38 +177,13 @@ export class Partition {
       Item: item,
     });
     this.cache[sk] = item;
-    return item as T;
+    return new Item(this, sk, item) as any;
   }
 
   /**
-   * Update an existing item in this partition.
+   * Internal method to get raw data for a specific SK.
    */
-  async update<T = any>(sk: string, data: Partial<T>): Promise<T> {
-    const current = await this.get<T>(sk) || ({} as T);
-    const updated = { ...current, ...data } as T;
-    return await this.create(sk, updated);
-  }
-
-  /**
-   * Delete an item by its SK within this partition.
-   */
-  async delete(sk: string): Promise<void> {
-    await this.db.delete({
-      TableName: this.tableName,
-      Key: {
-        [this.pkName]: this.pkValue,
-        [this.skName]: sk,
-      },
-    });
-    delete this.cache[sk];
-  }
-
-  /**
-   * Get data for a specific SK within this partition.
-   * If the partition is loaded, it returns from cache.
-   * Otherwise, it fetches the data immediately.
-   */
-  async get<T = any>(sk: string): Promise<T | null> {
+  private async _getRaw<T = any>(sk: string): Promise<T | null> {
     if (this.cache[sk] !== undefined) {
       return (this.cache[sk] as T) || null;
     }
@@ -182,6 +206,47 @@ export class Partition {
     }
     return data;
   }
+
+  /**
+   * Update an existing item in this partition.
+   */
+  async update<T = any>(sk: string, data: Partial<T>, indices?: IndexQuery[]): Promise<T> {
+    const current = await this._getRaw(sk) || {};
+    const updated = { ...current, ...data } as T;
+    return await this.create(sk, updated, indices);
+  }
+
+  /**
+   * Delete an item by its SK within this partition.
+   */
+  async delete(sk: string): Promise<void> {
+    await this.db.delete({
+      TableName: this.tableName,
+      Key: {
+        [this.pkName]: this.pkValue,
+        [this.skName]: sk,
+      },
+    });
+    delete this.cache[sk];
+  }
+
+  /**
+   * Get data for a specific SK and return it wrapped in a Item object.
+   */
+  async get<T = any>(sk: string): Promise<T | null> {
+    const data = await this._getRaw<T>(sk);
+    return data ? (new Item(this, sk, data) as any) : null;
+  }
+
+  /**
+   * Pre-draft an item for creation. Returns an Item object.
+   * @param sk The sort key value
+   * @param data Initial data for the row
+   */
+  draft<T = any>(sk: string, data: any = {}): T {
+    return new Item(this, sk, data) as any;
+  }
+
 
   getPkValue(): string {
     return this.pkValue;

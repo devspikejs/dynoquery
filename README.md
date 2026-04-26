@@ -12,7 +12,7 @@ npm install dynoquery
 
 - Basic CRUD operations (create, get, update, delete)
 - Optimized for **Single-Table Design** (Partitions and GSIs)
-- Automatic result mapping to models
+- Automatic result mapping to partition models
 - Built-in caching for partition instances
 - TypeScript support
 
@@ -64,6 +64,38 @@ async function userExample() {
 }
 ```
 
+#### Second-Level Objects (Single-Row Operations)
+
+For a more flexible way to work with individual rows, you can use `draft()` and `get()` to obtain an `Item` object, then call `create()`, `update()`, or `save()` on it directly.
+
+```typescript
+const john = db.User('john@example.com');
+
+// 1. Create a new row
+const johnMeta = john.draft('METADATA');
+johnMeta.name = 'John Doe';
+johnMeta.email = 'johndoe@johnmail.com';
+await johnMeta.save();
+
+// 2. Create with properties in arguments
+const johnStat = john.draft('STAT');
+await johnStat.create({ views: 100 });
+
+// 3. Get and update an existing row
+const johnBio = await john.get('BIO');
+johnBio.birthYear = 1986;
+await johnBio.save();
+
+// 4. Partial update without fetching
+const johnFriend1 = john.draft('FRIEND#1');
+await johnFriend1.update({ Name: 'Alice', rank: 1 });
+
+// 5. Set properties during initialization
+const johnPref = john.draft('PREF', { theme: 'dark' });
+await johnPref.save();
+
+````
+
 ### 2. Global Secondary Indexes (findBy)
 
 Use `findBy` to query your GSIs easily.
@@ -87,10 +119,14 @@ async function indexExample() {
   // Get all items in this category
   const items = await electronics.getAll();
   
-  // If results match a registered model prefix, they are automatically mapped
-  items.forEach(item => {
+  // If results match a registered item prefix, they are automatically mapped
+  items.forEach(async item => {
     if (item.__model === 'Product') {
       const productPartition = item.getPartition(); // Returns a Partition instance
+      
+      // Now you can also edit and save directly if it matches a item
+      item.price = 45;
+      await item.save();
     }
   });
 }
@@ -98,8 +134,9 @@ async function indexExample() {
 
 ### 3. Creating Items with GSI Support
 
-You can pass index queries directly to `create()` to automatically populate GSI attributes.
+You can pass index queries directly to `create()` or `update()` to automatically populate GSI attributes. This works on both the Partition level and the Item level.
 
+#### Using Partition.create() and Partition.update()
 ```typescript
 const electronics = db.findByCategory('ELECTRONICS', 'RANK#1');
 
@@ -108,6 +145,38 @@ await db.Product('p123').create('INFO', {
   name: 'Gaming Mouse',
   price: 50
 }, [electronics]);
+
+// Partial update with GSI support
+await db.Product('p123').update('INFO', { price: 45 }, [electronics]);
+```
+
+#### Using Item.create() and Item.update()
+```typescript
+const electronics = db.findByCategory('ELECTRONICS', 'RANK#1');
+const mouse = db.Product('p123').draft('INFO');
+
+// Pass data and indices directly to create()
+await mouse.create({ 
+  name: 'Gaming Mouse', 
+  price: 50 
+}, [electronics]);
+
+// Or use update() directly on the item for partial updates
+await mouse.update({ price: 40 }, [electronics]);
+```
+
+#### Using setIndex() for persistence
+You can also use `setIndex()` to attach indices to an item so they are used automatically whenever you call `save()`.
+
+```typescript
+const electronics = db.findByCategory('ELECTRONICS', 'RANK#1');
+const mouse = db.Product('p123').draft('INFO');
+
+mouse.setIndex(electronics);
+mouse.price = 50;
+
+// save() will now automatically include GSI attributes from the attached index
+await mouse.save();
 ```
 
 ## Optional Configuration Parameters
@@ -165,11 +234,12 @@ if (token) {
 - `scan(params)`: Low-level ScanCommand wrapper.
 
 ### Partition
-- `get(sk)`: Fetches data for a specific SK (returns a Promise).
+- `get(sk)`: Fetches data for a specific Sort Key value (returns a Promise).
 - `getAll(options?)`: Fetches items in the partition. Options: `{ limit, exclusiveStartKey }`.
 - `create(sk, data, indices?)`: Creates an item. `indices` is an array of `IndexQuery` for GSI population.
 - `update(sk, data)`: Partial update of an item.
 - `delete(sk)`: Deletes an item.
+- `draft(sk, data?)`: Returns an `Item` object initialized with `data` (optional).
 - `deleteAll()`: Deletes all items in the partition.
 - `getLastEvaluatedKey()`: Returns the pagination token from the last `getAll()`.
 
@@ -177,6 +247,12 @@ if (token) {
 - `get(skValue?)`: Get a single item from the index.
 - `getAll(options?)`: Query index. Options: `{ limit, scanIndexForward, exclusiveStartKey, skValue }`.
 - `getLastEvaluatedKey()`: Returns the pagination token from the last `getAll()`.
+
+### Item (returned by Partition.get or draft)
+- `create(data?, indices?)`: Persists the item as a new record with the provided data. Supports GSI indices.
+- `update(data, indices?)`: Partial update of the item. Supports GSI indices.
+- `save()`: Persists the current state of the item (alias for update of all properties). Uses indices attached via `setIndex()`.
+- `setIndex(indices)`: Attaches one or more `IndexQuery` objects to the item for use with `save()` or `create()`.
 
 ## License
 

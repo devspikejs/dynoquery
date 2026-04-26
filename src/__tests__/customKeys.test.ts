@@ -34,7 +34,7 @@ describe("Custom Key Names Support", () => {
     mockSend = mockDocClient.send;
   });
 
-  it("should use custom key names in Model operations", async () => {
+  it("should use custom key names in Item operations", async () => {
     const john = (db as any).User("john@example.com");
 
     // Test get/find

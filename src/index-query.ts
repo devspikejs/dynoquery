@@ -1,6 +1,8 @@
 import { DynoQuery } from "./index";
 import { Partition } from "./partition";
 
+import { Item } from "./partition";
+
 export interface IndexQueryConfig {
   tableName?: string;
   indexName: string;
@@ -84,7 +86,7 @@ export class IndexQuery {
     });
 
     const items = (response.Items || []) as any[];
-    const mappedItems = items.map(item => this.mapItemToModel(item));
+    const mappedItems = items.map(item => this.mapItemToModelItem(item));
 
     this.lastEvaluatedKey = response.LastEvaluatedKey || null;
 
@@ -116,7 +118,7 @@ export class IndexQuery {
     return this.lastEvaluatedKey;
   }
 
-  private mapItemToModel(item: any): any {
+  private mapItemToModelItem(item: any): any {
     const pkName = this.db.getPkName();
     const pkValue = item[pkName];
 
@@ -136,14 +138,19 @@ export class IndexQuery {
 
         // Pre-fill the cache if we have the SK
         const skName = this.db.getSkName();
-        if (item[skName]) {
-            partition["cache"][item[skName]] = item;
+        const skValue = item[skName];
+        if (skValue) {
+          partition["cache"][skValue] = item;
         }
 
         // Add a property __model to the item if it matches.
         item.__model = name;
         // Also provide a way to get the partition instance from the item
         item.getPartition = () => partition;
+
+        if (skValue) {
+          return new Item(partition, skValue, item);
+        }
 
         return item;
       }
