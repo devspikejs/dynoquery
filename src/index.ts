@@ -67,8 +67,12 @@ export class DynoQuery {
     if (models) {
       this.registeredModels = models;
       Object.entries(models).forEach(([name, def]) => {
-        this[name] = (id: string) => {
-          return new Partition(this, { pkPrefix: this.globalPkPrefix + def.pkPrefix }, id);
+        this[name] = (id: string, sk?: string) => {
+          const partition = new Partition(this, { pkPrefix: this.globalPkPrefix + def.pkPrefix }, id);
+          if (sk) {
+            return partition.draft(sk);
+          }
+          return partition;
         };
       });
     }

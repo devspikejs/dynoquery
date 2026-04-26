@@ -66,7 +66,7 @@ async function userExample() {
 
 #### Second-Level Objects (Single-Row Operations)
 
-For a more flexible way to work with individual rows, you can use `draft()` and `get()` to obtain an `Item` object, then call `create()`, `update()`, or `save()` on it directly.
+For a more flexible way to work with individual rows, you can use `draft()` and `get()` to obtain an `Item` object, then call `create()`, `update()`, or `save()` on it directly. You can also use a shorthand by passing a second argument to your model function (as shown in the examples below).
 
 ```typescript
 const john = db.User('john@example.com');
@@ -94,7 +94,10 @@ await johnFriend1.update({ Name: 'Alice', rank: 1 });
 const johnPref = john.draft('PREF', { theme: 'dark' });
 await johnPref.save();
 
-````
+// 6. Shorthand access (returns an Item object directly)
+const johnMeta = db.User('john@example.com', 'METADATA');
+await johnMeta.update({ name: 'John Doe' });
+```
 
 ### 2. Global Secondary Indexes (findBy)
 
@@ -153,7 +156,7 @@ await db.Product('p123').update('INFO', { price: 45 }, [electronics]);
 #### Using Item.create() and Item.update()
 ```typescript
 const electronics = db.findByCategory('ELECTRONICS', 'RANK#1');
-const mouse = db.Product('p123').draft('INFO');
+const mouse = db.Product('p123', 'INFO');
 
 // Pass data and indices directly to create()
 await mouse.create({ 
@@ -170,7 +173,7 @@ You can also use `setIndex()` to attach indices to an item so they are used auto
 
 ```typescript
 const electronics = db.findByCategory('ELECTRONICS', 'RANK#1');
-const mouse = db.Product('p123').draft('INFO');
+const mouse = db.Product('p123', 'INFO');
 
 mouse.setIndex(electronics);
 mouse.price = 50;
@@ -232,6 +235,8 @@ if (token) {
 - `delete(params)`: Low-level DeleteCommand wrapper.
 - `query(params)`: Low-level QueryCommand wrapper.
 - `scan(params)`: Low-level ScanCommand wrapper.
+- `[ModelName](id, skValue?)`: Returns a `Partition` instance for the given ID. If `skValue` is provided, returns an `Item` object directly.
+- `findBy[IndexName](id, skValue?)`: Returns an `IndexQuery` instance.
 
 ### Partition
 - `get(sk)`: Fetches data for a specific Sort Key value (returns a Promise).
