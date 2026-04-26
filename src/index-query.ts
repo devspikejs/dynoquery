@@ -86,7 +86,7 @@ export class IndexQuery {
     });
 
     const items = (response.Items || []) as any[];
-    const mappedItems = items.map(item => this.mapItemToModelItem(item));
+    const mappedItems = items.map(item => this.db.mapItemToModelItem(item));
 
     this.lastEvaluatedKey = response.LastEvaluatedKey || null;
 
@@ -118,44 +118,4 @@ export class IndexQuery {
     return this.lastEvaluatedKey;
   }
 
-  private mapItemToModelItem(item: any): any {
-    const pkName = this.db.getPkName();
-    const pkValue = item[pkName];
-
-    if (!pkValue) return item;
-
-    const registeredModels = this.db.getRegisteredModels();
-    const globalPrefix = this.db.getPkPrefix();
-
-    for (const [name, def] of Object.entries(registeredModels)) {
-      const fullPrefix = globalPrefix + def.pkPrefix;
-      if (pkValue.startsWith(fullPrefix)) {
-        // Find the ID by removing the prefix
-        const id = pkValue.substring(fullPrefix.length);
-
-        // Return a Partition instance and attach the data to its cache.
-        const partition = new Partition(this.db, { pkPrefix: fullPrefix }, id);
-
-        // Pre-fill the cache if we have the SK
-        const skName = this.db.getSkName();
-        const skValue = item[skName];
-        if (skValue) {
-          partition["cache"][skValue] = item;
-        }
-
-        // Add a property __model to the item if it matches.
-        item.__model = name;
-        // Also provide a way to get the partition instance from the item
-        item.getPartition = () => partition;
-
-        if (skValue) {
-          return new Item(partition, skValue, item);
-        }
-
-        return item;
-      }
-    }
-
-    return item;
-  }
 }
