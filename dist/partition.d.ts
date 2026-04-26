@@ -10,6 +10,7 @@ export declare class Item {
     private _indices;
     private _partition;
     private _skValue;
+    private _toBeDeleted;
     constructor(partition: Partition, skValue: string, data: any);
 }
 export declare class Partition {
@@ -55,10 +56,15 @@ export declare class Partition {
     get<T = any>(skValue: string): Promise<T | null>;
     /**
      * Pre-draft an item for creation. Returns an Item object.
-     * @param sk The sort key value
+     * @param skValue The sort key value
      * @param data Initial data for the row
      */
     draft<T = any>(skValue: string, data?: any): T;
+    /**
+     * Pre-draft an item for deletion. Returns an Item object marked for deletion.
+     * @param skValue The sort key value
+     */
+    draftDelete<T = any>(skValue: string): T;
     getTableName(): string;
     getPkValue(): string;
     getLastEvaluatedKey(): any;

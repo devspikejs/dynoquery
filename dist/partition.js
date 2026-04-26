@@ -15,6 +15,7 @@ class Item {
         this._indices = [];
         this._partition = partition;
         this._skValue = skValue;
+        this._toBeDeleted = !!(data === null || data === void 0 ? void 0 : data._toBeDeleted);
         Object.assign(this, data);
         const self = this;
         return new Proxy(this, {
@@ -24,7 +25,7 @@ class Item {
                         const dataToSave = {};
                         for (const key in target) {
                             if (Object.prototype.hasOwnProperty.call(target, key) &&
-                                !["_indices", "_partition", "_skValue"].includes(key) &&
+                                !["_indices", "_partition", "_skValue", "_toBeDeleted"].includes(key) &&
                                 typeof target[key] !== "function") {
                                 dataToSave[key] = target[key];
                             }
@@ -60,6 +61,9 @@ class Item {
                 }
                 if (prop === "getSkValue") {
                     return () => skValue;
+                }
+                if (prop === "toBeDeleted") {
+                    return () => self._toBeDeleted;
                 }
                 return Reflect.get(target, prop, receiver);
             },
@@ -219,11 +223,18 @@ class Partition {
     }
     /**
      * Pre-draft an item for creation. Returns an Item object.
-     * @param sk The sort key value
+     * @param skValue The sort key value
      * @param data Initial data for the row
      */
     draft(skValue, data = {}) {
         return new Item(this, skValue, data);
+    }
+    /**
+     * Pre-draft an item for deletion. Returns an Item object marked for deletion.
+     * @param skValue The sort key value
+     */
+    draftDelete(skValue) {
+        return new Item(this, skValue, { _toBeDeleted: true });
     }
     getTableName() {
         return this.tableName || "";
