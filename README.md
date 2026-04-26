@@ -182,6 +182,35 @@ mouse.price = 50;
 await mouse.save();
 ```
 
+### 4. Batch Operations
+
+DynoQuery provides `batchWrite` and `batchRead` for processing multiple items across partitions.
+
+```typescript
+// 1. Batch Write (Create/Replace multiple items)
+const user1 = db.User('john', 'METADATA');
+user1.name = 'John Doe';
+
+const user2 = db.User('jane', 'METADATA');
+user2.name = 'Jane Doe';
+
+await db.batchWrite([user1, user2]);
+
+// 2. Batch Read (Fetch multiple items or index queries)
+const userDraft = db.User('john', 'METADATA');
+const categoryQuery = db.findByCategory('ELECTRONICS', 'p123');
+
+const results = await db.batchRead([userDraft, categoryQuery]);
+
+results.forEach(item => {
+  console.log(item.__model); // Automatically mapped to models
+  if (item.__model === 'User') {
+    item.status = 'active';
+    item.save(); // Second-level methods are available
+  }
+});
+```
+
 ## Optional Configuration Parameters
 
 | Parameter | Type | Default | Description |
@@ -235,6 +264,8 @@ if (token) {
 - `delete(params)`: Low-level DeleteCommand wrapper.
 - `query(params)`: Low-level QueryCommand wrapper.
 - `scan(params)`: Low-level ScanCommand wrapper.
+- `batchWrite(items)`: Batch persists multiple `Item` objects.
+- `batchRead(items)`: Batch fetches multiple `Item` or `IndexQuery` objects.
 - `[ModelName](id, skValue?)`: Returns a `Partition` instance for the given ID. If `skValue` is provided, returns an `Item` object directly.
 - `findBy[IndexName](id, skValue?)`: Returns an `IndexQuery` instance.
 

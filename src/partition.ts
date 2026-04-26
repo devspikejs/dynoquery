@@ -10,8 +10,12 @@ export interface PartitionConfig {
 export class Item {
   [key: string]: any;
   private _indices: IndexQuery[] = [];
+  private _partition: Partition;
+  private _skValue: string;
 
   constructor(partition: Partition, skValue: string, data: any) {
+    this._partition = partition;
+    this._skValue = skValue;
     Object.assign(this, data);
 
     const self = this;
@@ -21,7 +25,11 @@ export class Item {
           return () => {
             const dataToSave: any = {};
             for (const key in target) {
-              if (Object.prototype.hasOwnProperty.call(target, key) && key !== "_indices" && typeof target[key] !== 'function') {
+              if (
+                Object.prototype.hasOwnProperty.call(target, key) &&
+                !["_indices", "_partition", "_skValue"].includes(key) &&
+                typeof target[key] !== "function"
+              ) {
                 dataToSave[key] = target[key];
               }
             }
@@ -49,6 +57,12 @@ export class Item {
             }
             return receiver;
           };
+        }
+        if (prop === "getPartition") {
+          return () => partition;
+        }
+        if (prop === "getSkValue") {
+          return () => skValue;
         }
         return Reflect.get(target, prop, receiver);
       },
@@ -247,6 +261,10 @@ export class Partition {
     return new Item(this, skValue, data) as any;
   }
 
+
+  getTableName(): string {
+    return this.tableName || "";
+  }
 
   getPkValue(): string {
     return this.pkValue;
