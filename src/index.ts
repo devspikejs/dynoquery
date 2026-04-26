@@ -179,26 +179,37 @@ export class DynoQuery {
         tableGroups[tableName] = [];
       }
 
-      const dataToSave: any = {};
-      for (const key in item) {
-        if (
-          Object.prototype.hasOwnProperty.call(item, key) &&
-          !["_indices", "_partition", "_skValue"].includes(key) &&
-          typeof item[key] !== "function"
-        ) {
-          dataToSave[key] = item[key];
+      if (item.toBeDeleted()) {
+        tableGroups[tableName].push({
+          DeleteRequest: {
+            Key: {
+              [this.pkName]: partition.getPkValue(),
+              [this.skName]: skValue,
+            },
+          },
+        });
+      } else {
+        const dataToSave: any = {};
+        for (const key in item) {
+          if (
+            Object.prototype.hasOwnProperty.call(item, key) &&
+            !["_indices", "_partition", "_skValue", "_toBeDeleted"].includes(key) &&
+            typeof item[key] !== "function"
+          ) {
+            dataToSave[key] = item[key];
+          }
         }
+
+        // Ensure PK and SK are in the data
+        dataToSave[this.pkName] = partition.getPkValue();
+        dataToSave[this.skName] = skValue;
+
+        tableGroups[tableName].push({
+          PutRequest: {
+            Item: dataToSave,
+          },
+        });
       }
-
-      // Ensure PK and SK are in the data
-      dataToSave[this.pkName] = partition.getPkValue();
-      dataToSave[this.skName] = skValue;
-
-      tableGroups[tableName].push({
-        PutRequest: {
-          Item: dataToSave,
-        },
-      });
     });
 
     const results: any[] = [];

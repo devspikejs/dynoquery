@@ -12,10 +12,12 @@ export class Item {
   private _indices: IndexQuery[] = [];
   private _partition: Partition;
   private _skValue: string;
+  private _toBeDeleted: boolean;
 
   constructor(partition: Partition, skValue: string, data: any) {
     this._partition = partition;
     this._skValue = skValue;
+    this._toBeDeleted = !!data?._toBeDeleted;
     Object.assign(this, data);
 
     const self = this;
@@ -27,7 +29,7 @@ export class Item {
             for (const key in target) {
               if (
                 Object.prototype.hasOwnProperty.call(target, key) &&
-                !["_indices", "_partition", "_skValue"].includes(key) &&
+                !["_indices", "_partition", "_skValue", "_toBeDeleted"].includes(key) &&
                 typeof target[key] !== "function"
               ) {
                 dataToSave[key] = target[key];
@@ -63,6 +65,9 @@ export class Item {
         }
         if (prop === "getSkValue") {
           return () => skValue;
+        }
+        if (prop === "toBeDeleted") {
+          return () => self._toBeDeleted;
         }
         return Reflect.get(target, prop, receiver);
       },
@@ -254,11 +259,19 @@ export class Partition {
 
   /**
    * Pre-draft an item for creation. Returns an Item object.
-   * @param sk The sort key value
+   * @param skValue The sort key value
    * @param data Initial data for the row
    */
   draft<T = any>(skValue: string, data: any = {}): T {
     return new Item(this, skValue, data) as any;
+  }
+
+  /**
+   * Pre-draft an item for deletion. Returns an Item object marked for deletion.
+   * @param skValue The sort key value
+   */
+  draftDelete<T = any>(skValue: string): T {
+    return new Item(this, skValue, { _toBeDeleted: true }) as any;
   }
 
 

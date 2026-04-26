@@ -188,16 +188,16 @@ DynoQuery provides `batchWrite` and `batchRead` for processing multiple items ac
 
 ```typescript
 // 1. Batch Write (Create/Replace multiple items)
-const user1 = db.User('john', 'METADATA');
+const user1 = db.User('john@example.com', 'METADATA');
 user1.name = 'John Doe';
 
-const user2 = db.User('jane', 'METADATA');
+const user2 = db.User('jane@example.com', 'METADATA');
 user2.name = 'Jane Doe';
 
 await db.batchWrite([user1, user2]);
 
 // 2. Batch Read (Fetch multiple items or index queries)
-const userDraft = db.User('john', 'METADATA');
+const userDraft = db.User('john@example.com', 'METADATA');
 const categoryQuery = db.findByCategory('ELECTRONICS', 'p123');
 
 const results = await db.batchRead([userDraft, categoryQuery]);
@@ -209,6 +209,10 @@ results.forEach(item => {
     item.save(); // Second-level methods are available
   }
 });
+
+// 3. Batch Delete
+const userToDelete = db.User('john@example.com').draftDelete('METADATA');
+await db.batchWrite([userToDelete]);
 ```
 
 ## Optional Configuration Parameters
@@ -276,6 +280,7 @@ if (token) {
 - `update(skValue, data)`: Partial update of an item.
 - `delete(skValue)`: Deletes an item.
 - `draft(skValue, data?)`: Returns an `Item` object initialized with `data` (optional).
+- `draftDelete(skValue)`: Returns an `Item` object marked for deletion (for use with `batchWrite`).
 - `deleteAll()`: Deletes all items in the partition.
 - `getLastEvaluatedKey()`: Returns the pagination token from the last `getAll()`.
 
