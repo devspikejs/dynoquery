@@ -34,7 +34,7 @@ export declare class Partition {
     /**
      * Create an item in this partition.
      */
-    create<T = any>(sk: string, data: T, indices?: IndexQuery[]): Promise<T>;
+    create<T = any>(skValue: string, data: T, indices?: IndexQuery[]): Promise<T>;
     /**
      * Internal method to get raw data for a specific SK.
      */
@@ -42,21 +42,21 @@ export declare class Partition {
     /**
      * Update an existing item in this partition.
      */
-    update<T = any>(sk: string, data: Partial<T>, indices?: IndexQuery[]): Promise<T>;
+    update<T = any>(skValue: string, data: Partial<T>, indices?: IndexQuery[]): Promise<T>;
     /**
      * Delete an item by its SK within this partition.
      */
-    delete(sk: string): Promise<void>;
+    delete(skValue: string): Promise<void>;
     /**
      * Get data for a specific SK and return it wrapped in a Item object.
      */
-    get<T = any>(sk: string): Promise<T | null>;
+    get<T = any>(skValue: string): Promise<T | null>;
     /**
      * Pre-draft an item for creation. Returns an Item object.
      * @param sk The sort key value
      * @param data Initial data for the row
      */
-    draft<T = any>(sk: string, data?: any): T;
+    draft<T = any>(skValue: string, data?: any): T;
     getPkValue(): string;
     getLastEvaluatedKey(): any;
     /**

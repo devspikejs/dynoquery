@@ -129,9 +129,9 @@ class Partition {
     /**
      * Create an item in this partition.
      */
-    create(sk, data, indices) {
+    create(skValue, data, indices) {
         return __awaiter(this, void 0, void 0, function* () {
-            const item = Object.assign({ [this.pkName]: this.pkValue, [this.skName]: sk }, data);
+            const item = Object.assign({ [this.pkName]: this.pkValue, [this.skName]: skValue }, data);
             if (indices) {
                 indices.forEach((index) => {
                     item[index.getPkName()] = index.getPkValue();
@@ -144,17 +144,17 @@ class Partition {
                 TableName: this.tableName,
                 Item: item,
             });
-            this.cache[sk] = item;
-            return new Item(this, sk, item);
+            this.cache[skValue] = item;
+            return new Item(this, skValue, item);
         });
     }
     /**
      * Internal method to get raw data for a specific SK.
      */
-    _getRaw(sk) {
+    _getRaw(skValue) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (this.cache[sk] !== undefined) {
-                return this.cache[sk] || null;
+            if (this.cache[skValue] !== undefined) {
+                return this.cache[skValue] || null;
             }
             if (this.isLoaded) {
                 return null;
@@ -163,12 +163,12 @@ class Partition {
                 TableName: this.tableName,
                 Key: {
                     [this.pkName]: this.pkValue,
-                    [this.skName]: sk,
+                    [this.skName]: skValue,
                 },
             });
             const data = response.Item || null;
             if (data) {
-                this.cache[sk] = data;
+                this.cache[skValue] = data;
             }
             return data;
         });
@@ -176,35 +176,35 @@ class Partition {
     /**
      * Update an existing item in this partition.
      */
-    update(sk, data, indices) {
+    update(skValue, data, indices) {
         return __awaiter(this, void 0, void 0, function* () {
-            const current = (yield this._getRaw(sk)) || {};
+            const current = (yield this._getRaw(skValue)) || {};
             const updated = Object.assign(Object.assign({}, current), data);
-            return yield this.create(sk, updated, indices);
+            return yield this.create(skValue, updated, indices);
         });
     }
     /**
      * Delete an item by its SK within this partition.
      */
-    delete(sk) {
+    delete(skValue) {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.db.delete({
                 TableName: this.tableName,
                 Key: {
                     [this.pkName]: this.pkValue,
-                    [this.skName]: sk,
+                    [this.skName]: skValue,
                 },
             });
-            delete this.cache[sk];
+            delete this.cache[skValue];
         });
     }
     /**
      * Get data for a specific SK and return it wrapped in a Item object.
      */
-    get(sk) {
+    get(skValue) {
         return __awaiter(this, void 0, void 0, function* () {
-            const data = yield this._getRaw(sk);
-            return data ? new Item(this, sk, data) : null;
+            const data = yield this._getRaw(skValue);
+            return data ? new Item(this, skValue, data) : null;
         });
     }
     /**
@@ -212,8 +212,8 @@ class Partition {
      * @param sk The sort key value
      * @param data Initial data for the row
      */
-    draft(sk, data = {}) {
-        return new Item(this, sk, data);
+    draft(skValue, data = {}) {
+        return new Item(this, skValue, data);
     }
     getPkValue() {
         return this.pkValue;

@@ -55,10 +55,10 @@ class DynoQuery {
         if (models) {
             this.registeredModels = models;
             Object.entries(models).forEach(([name, def]) => {
-                this[name] = (id, sk) => {
+                this[name] = (id, skValue) => {
                     const partition = new partition_1.Partition(this, { pkPrefix: this.globalPkPrefix + def.pkPrefix }, id);
-                    if (sk) {
-                        return partition.draft(sk);
+                    if (skValue) {
+                        return partition.draft(skValue);
                     }
                     return partition;
                 };
