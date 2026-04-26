@@ -5,6 +5,11 @@ export interface PartitionConfig {
     pk?: string;
     pkPrefix?: string;
 }
+export declare class Item {
+    [key: string]: any;
+    private _indices;
+    constructor(partition: Partition, skValue: string, data: any);
+}
 export declare class Partition {
     protected db: DynoQuery;
     protected tableName?: string;
@@ -31,19 +36,27 @@ export declare class Partition {
      */
     create<T = any>(sk: string, data: T, indices?: IndexQuery[]): Promise<T>;
     /**
+     * Internal method to get raw data for a specific SK.
+     */
+    private _getRaw;
+    /**
      * Update an existing item in this partition.
      */
-    update<T = any>(sk: string, data: Partial<T>): Promise<T>;
+    update<T = any>(sk: string, data: Partial<T>, indices?: IndexQuery[]): Promise<T>;
     /**
      * Delete an item by its SK within this partition.
      */
     delete(sk: string): Promise<void>;
     /**
-     * Get data for a specific SK within this partition.
-     * If the partition is loaded, it returns from cache.
-     * Otherwise, it fetches the data immediately.
+     * Get data for a specific SK and return it wrapped in a Item object.
      */
     get<T = any>(sk: string): Promise<T | null>;
+    /**
+     * Pre-draft an item for creation. Returns an Item object.
+     * @param sk The sort key value
+     * @param data Initial data for the row
+     */
+    draft<T = any>(sk: string, data?: any): T;
     getPkValue(): string;
     getLastEvaluatedKey(): any;
     /**

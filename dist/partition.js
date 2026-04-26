@@ -9,7 +9,54 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Partition = void 0;
+exports.Partition = exports.Item = void 0;
+class Item {
+    constructor(partition, skValue, data) {
+        this._indices = [];
+        Object.assign(this, data);
+        const self = this;
+        return new Proxy(this, {
+            get(target, prop, receiver) {
+                if (prop === "save") {
+                    return () => {
+                        const dataToSave = {};
+                        for (const key in target) {
+                            if (Object.prototype.hasOwnProperty.call(target, key) && key !== "_indices" && typeof target[key] !== 'function') {
+                                dataToSave[key] = target[key];
+                            }
+                        }
+                        return partition.update(skValue, dataToSave, self._indices);
+                    };
+                }
+                if (prop === "create") {
+                    return (data, indices) => {
+                        const dataToSave = data || {};
+                        const finalIndices = indices || self._indices;
+                        return partition.create(skValue, dataToSave, finalIndices);
+                    };
+                }
+                if (prop === "update") {
+                    return (data, indices) => {
+                        return partition.update(skValue, data, indices);
+                    };
+                }
+                if (prop === "setIndex") {
+                    return (indexObj) => {
+                        if (Array.isArray(indexObj)) {
+                            self._indices.push(...indexObj);
+                        }
+                        else {
+                            self._indices.push(indexObj);
+                        }
+                        return receiver;
+                    };
+                }
+                return Reflect.get(target, prop, receiver);
+            },
+        });
+    }
+}
+exports.Item = Item;
 class Partition {
     constructor(db, config, id) {
         this.cache = {};
@@ -76,7 +123,7 @@ class Partition {
                 this.isLoaded = true;
             }
             this.lastEvaluatedKey = response.LastEvaluatedKey || null;
-            return items;
+            return items.map((item) => new Item(this, item[this.skName], item));
         });
     }
     /**
@@ -98,40 +145,13 @@ class Partition {
                 Item: item,
             });
             this.cache[sk] = item;
-            return item;
+            return new Item(this, sk, item);
         });
     }
     /**
-     * Update an existing item in this partition.
+     * Internal method to get raw data for a specific SK.
      */
-    update(sk, data) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const current = (yield this.get(sk)) || {};
-            const updated = Object.assign(Object.assign({}, current), data);
-            return yield this.create(sk, updated);
-        });
-    }
-    /**
-     * Delete an item by its SK within this partition.
-     */
-    delete(sk) {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.db.delete({
-                TableName: this.tableName,
-                Key: {
-                    [this.pkName]: this.pkValue,
-                    [this.skName]: sk,
-                },
-            });
-            delete this.cache[sk];
-        });
-    }
-    /**
-     * Get data for a specific SK within this partition.
-     * If the partition is loaded, it returns from cache.
-     * Otherwise, it fetches the data immediately.
-     */
-    get(sk) {
+    _getRaw(sk) {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.cache[sk] !== undefined) {
                 return this.cache[sk] || null;
@@ -152,6 +172,48 @@ class Partition {
             }
             return data;
         });
+    }
+    /**
+     * Update an existing item in this partition.
+     */
+    update(sk, data, indices) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const current = (yield this._getRaw(sk)) || {};
+            const updated = Object.assign(Object.assign({}, current), data);
+            return yield this.create(sk, updated, indices);
+        });
+    }
+    /**
+     * Delete an item by its SK within this partition.
+     */
+    delete(sk) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.db.delete({
+                TableName: this.tableName,
+                Key: {
+                    [this.pkName]: this.pkValue,
+                    [this.skName]: sk,
+                },
+            });
+            delete this.cache[sk];
+        });
+    }
+    /**
+     * Get data for a specific SK and return it wrapped in a Item object.
+     */
+    get(sk) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const data = yield this._getRaw(sk);
+            return data ? new Item(this, sk, data) : null;
+        });
+    }
+    /**
+     * Pre-draft an item for creation. Returns an Item object.
+     * @param sk The sort key value
+     * @param data Initial data for the row
+     */
+    draft(sk, data = {}) {
+        return new Item(this, sk, data);
     }
     getPkValue() {
         return this.pkValue;

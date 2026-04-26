@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IndexQuery = void 0;
 const partition_1 = require("./partition");
+const partition_2 = require("./partition");
 class IndexQuery {
     constructor(db, config) {
         this.lastEvaluatedKey = null;
@@ -54,7 +55,7 @@ class IndexQuery {
                 ExclusiveStartKey: options === null || options === void 0 ? void 0 : options.exclusiveStartKey,
             });
             const items = (response.Items || []);
-            const mappedItems = items.map(item => this.mapItemToModel(item));
+            const mappedItems = items.map(item => this.mapItemToModelItem(item));
             this.lastEvaluatedKey = response.LastEvaluatedKey || null;
             return mappedItems;
         });
@@ -80,7 +81,7 @@ class IndexQuery {
     getLastEvaluatedKey() {
         return this.lastEvaluatedKey;
     }
-    mapItemToModel(item) {
+    mapItemToModelItem(item) {
         const pkName = this.db.getPkName();
         const pkValue = item[pkName];
         if (!pkValue)
@@ -96,13 +97,17 @@ class IndexQuery {
                 const partition = new partition_1.Partition(this.db, { pkPrefix: fullPrefix }, id);
                 // Pre-fill the cache if we have the SK
                 const skName = this.db.getSkName();
-                if (item[skName]) {
-                    partition["cache"][item[skName]] = item;
+                const skValue = item[skName];
+                if (skValue) {
+                    partition["cache"][skValue] = item;
                 }
                 // Add a property __model to the item if it matches.
                 item.__model = name;
                 // Also provide a way to get the partition instance from the item
                 item.getPartition = () => partition;
+                if (skValue) {
+                    return new partition_2.Item(partition, skValue, item);
+                }
                 return item;
             }
         }

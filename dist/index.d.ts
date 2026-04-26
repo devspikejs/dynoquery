@@ -64,4 +64,5 @@ export declare class DynoQuery {
     }>;
 }
 export * from "./partition";
+export { Item } from "./partition";
 export * from "./index-query";

@@ -34,7 +34,7 @@ var __rest = (this && this.__rest) || function (s, e) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DynoQuery = void 0;
+exports.Item = exports.DynoQuery = void 0;
 const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
 const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
 const partition_1 = require("./partition");
@@ -167,4 +167,6 @@ class DynoQuery {
 }
 exports.DynoQuery = DynoQuery;
 __exportStar(require("./partition"), exports);
+var partition_2 = require("./partition");
+Object.defineProperty(exports, "Item", { enumerable: true, get: function () { return partition_2.Item; } });
 __exportStar(require("./index-query"), exports);
