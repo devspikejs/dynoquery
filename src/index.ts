@@ -18,6 +18,9 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { Partition, Item } from "./partition";
 import { IndexQuery } from "./index-query";
+import { ExpressionBuilder, attr } from "./expression-builder";
+
+export { ExpressionBuilder, attr };
 
 export interface DynoQueryConfig {
   tableName?: string;

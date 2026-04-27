@@ -1,5 +1,6 @@
 import { DynoQuery } from "./index";
 import { IndexQuery } from "./index-query";
+import { ExpressionBuilder } from "./expression-builder";
 
 export interface PartitionConfig {
   tableName?: string;
@@ -13,6 +14,13 @@ export class Item {
   private _partition: Partition;
   private _skValue: string;
   private _toBeDeleted: boolean;
+  private _filterBuilder?: ExpressionBuilder;
+  private _conditionBuilder?: ExpressionBuilder;
+  private _rawCondition?: {
+    expression: string;
+    names?: Record<string, string>;
+    values?: Record<string, any>;
+  };
 
   constructor(partition: Partition, skValue: string, data: any) {
     this._partition = partition;
@@ -35,20 +43,54 @@ export class Item {
                 dataToSave[key] = target[key];
               }
             }
-            return partition.update(skValue, dataToSave, self._indices);
+            return partition.update(skValue, dataToSave, self._indices, {
+              conditionBuilder: self._conditionBuilder,
+              ConditionExpression: self._rawCondition?.expression,
+              ExpressionAttributeNames: self._rawCondition?.names,
+              ExpressionAttributeValues: self._rawCondition?.values,
+            });
           };
         }
         if (prop === "create") {
           return (data?: any, indices?: IndexQuery[]) => {
             const dataToSave = data || {};
             const finalIndices = indices || self._indices;
-            return partition.create(skValue, dataToSave, finalIndices);
+            return partition.create(skValue, dataToSave, finalIndices, {
+              conditionBuilder: self._conditionBuilder,
+              ConditionExpression: self._rawCondition?.expression,
+              ExpressionAttributeNames: self._rawCondition?.names,
+              ExpressionAttributeValues: self._rawCondition?.values,
+            });
           };
         }
         if (prop === "update") {
           return (data: any, indices?: IndexQuery[]) => {
-            return partition.update(skValue, data, indices);
+            return partition.update(skValue, data, indices, {
+              conditionBuilder: self._conditionBuilder,
+              ConditionExpression: self._rawCondition?.expression,
+              ExpressionAttributeNames: self._rawCondition?.names,
+              ExpressionAttributeValues: self._rawCondition?.values,
+            });
           };
+        }
+        if (prop === "setFilter") {
+          return (builder: ExpressionBuilder) => {
+            self._filterBuilder = builder;
+            return receiver;
+          };
+        }
+        if (prop === "setCondition") {
+          return (builder: ExpressionBuilder) => {
+            self._conditionBuilder = builder;
+            self._rawCondition = undefined;
+            return receiver;
+          };
+        }
+        if (prop === "getFilterBuilder") {
+          return () => self._filterBuilder;
+        }
+        if (prop === "getConditionBuilder") {
+          return () => self._conditionBuilder;
         }
         if (prop === "setIndex") {
           return (indexObj: IndexQuery | IndexQuery[]) => {
@@ -136,22 +178,34 @@ export class Partition {
   async getAll<T = any>(options?: {
     limit?: number;
     exclusiveStartKey?: any;
-    filterExpression?: string;
-    expressionAttributeNames?: Record<string, string>;
-    expressionAttributeValues?: Record<string, any>;
+    filterBuilder?: ExpressionBuilder;
+    FilterExpression?: string;
+    ExpressionAttributeNames?: Record<string, string>;
+    ExpressionAttributeValues?: Record<string, any>;
   }): Promise<T[]> {
+    let filterExpression = options?.FilterExpression;
+    let expressionAttributeNames: Record<string, string> = {
+      "#pk": this.pkName,
+      ...options?.ExpressionAttributeNames,
+    };
+    let expressionAttributeValues: Record<string, any> = {
+      ":pk": this.pkValue,
+      ...options?.ExpressionAttributeValues,
+    };
+
+    if (options?.filterBuilder) {
+      const { expression, attributeNames, attributeValues } = options.filterBuilder.build();
+      filterExpression = expression;
+      expressionAttributeNames = { ...expressionAttributeNames, ...attributeNames };
+      expressionAttributeValues = { ...expressionAttributeValues, ...attributeValues };
+    }
+
     const response = await this.db.query({
       TableName: this.tableName,
       KeyConditionExpression: "#pk = :pk",
-      FilterExpression: options?.filterExpression,
-      ExpressionAttributeNames: {
-        "#pk": this.pkName,
-        ...options?.expressionAttributeNames,
-      },
-      ExpressionAttributeValues: {
-        ":pk": this.pkValue,
-        ...options?.expressionAttributeValues,
-      },
+      FilterExpression: filterExpression,
+      ExpressionAttributeNames: expressionAttributeNames,
+      ExpressionAttributeValues: expressionAttributeValues,
       Limit: options?.limit,
       ExclusiveStartKey: options?.exclusiveStartKey,
     });
@@ -175,7 +229,17 @@ export class Partition {
   /**
    * Create an item in this partition.
    */
-  async create<T = any>(skValue: string, data: T, indices?: IndexQuery[]): Promise<T> {
+  async create<T = any>(
+    skValue: string,
+    data: T,
+    indices?: IndexQuery[],
+    options?: {
+      conditionBuilder?: ExpressionBuilder;
+      ConditionExpression?: string;
+      ExpressionAttributeNames?: Record<string, string>;
+      ExpressionAttributeValues?: Record<string, any>;
+    }
+  ): Promise<T> {
     const item: any = {
       [this.pkName]: this.pkValue,
       [this.skName]: skValue,
@@ -191,10 +255,37 @@ export class Partition {
       });
     }
 
-    await this.db.create({
+    const createParams: any = {
       TableName: this.tableName,
       Item: item,
-    });
+    };
+
+    if (options?.conditionBuilder) {
+      const { expression, attributeNames, attributeValues } = options.conditionBuilder.build();
+      createParams.ConditionExpression = expression;
+      createParams.ExpressionAttributeNames = {
+        ...createParams.ExpressionAttributeNames,
+        ...attributeNames,
+      };
+      createParams.ExpressionAttributeValues = {
+        ...createParams.ExpressionAttributeValues,
+        ...attributeValues,
+      };
+    }
+
+    if (options?.ConditionExpression) {
+      createParams.ConditionExpression = options.ConditionExpression;
+      createParams.ExpressionAttributeNames = {
+        ...createParams.ExpressionAttributeNames,
+        ...options.ExpressionAttributeNames,
+      };
+      createParams.ExpressionAttributeValues = {
+        ...createParams.ExpressionAttributeValues,
+        ...options.ExpressionAttributeValues,
+      };
+    }
+
+    await this.db.create(createParams);
     this.cache[skValue] = item;
     return new Item(this, skValue, item) as any;
   }
@@ -229,23 +320,68 @@ export class Partition {
   /**
    * Update an existing item in this partition.
    */
-  async update<T = any>(skValue: string, data: Partial<T>, indices?: IndexQuery[]): Promise<T> {
+  async update<T = any>(
+    skValue: string,
+    data: Partial<T>,
+    indices?: IndexQuery[],
+    options?: {
+      conditionBuilder?: ExpressionBuilder;
+      ConditionExpression?: string;
+      ExpressionAttributeNames?: Record<string, string>;
+      ExpressionAttributeValues?: Record<string, any>;
+    }
+  ): Promise<T> {
     const current = await this._getRaw(skValue) || {};
     const updated = { ...current, ...data } as T;
-    return await this.create(skValue, updated, indices);
+    return await this.create(skValue, updated, indices, options);
   }
 
   /**
    * Delete an item by its SK within this partition.
    */
-  async delete(skValue: string): Promise<void> {
-    await this.db.delete({
+  async delete(
+    skValue: string,
+    options?: {
+      conditionBuilder?: ExpressionBuilder;
+      ConditionExpression?: string;
+      ExpressionAttributeNames?: Record<string, string>;
+      ExpressionAttributeValues?: Record<string, any>;
+    }
+  ): Promise<void> {
+    const deleteParams: any = {
       TableName: this.tableName,
       Key: {
         [this.pkName]: this.pkValue,
         [this.skName]: skValue,
       },
-    });
+    };
+
+    if (options?.conditionBuilder) {
+      const { expression, attributeNames, attributeValues } = options.conditionBuilder.build();
+      deleteParams.ConditionExpression = expression;
+      deleteParams.ExpressionAttributeNames = {
+        ...deleteParams.ExpressionAttributeNames,
+        ...attributeNames,
+      };
+      deleteParams.ExpressionAttributeValues = {
+        ...deleteParams.ExpressionAttributeValues,
+        ...attributeValues,
+      };
+    }
+
+    if (options?.ConditionExpression) {
+      deleteParams.ConditionExpression = options.ConditionExpression;
+      deleteParams.ExpressionAttributeNames = {
+        ...deleteParams.ExpressionAttributeNames,
+        ...options.ExpressionAttributeNames,
+      };
+      deleteParams.ExpressionAttributeValues = {
+        ...deleteParams.ExpressionAttributeValues,
+        ...options.ExpressionAttributeValues,
+      };
+    }
+
+    await this.db.delete(deleteParams);
     delete this.cache[skValue];
   }
 

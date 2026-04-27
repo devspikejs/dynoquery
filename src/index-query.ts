@@ -1,7 +1,6 @@
 import { DynoQuery } from "./index";
-import { Partition } from "./partition";
-
-import { Item } from "./partition";
+import { Item, Partition } from "./partition";
+import { ExpressionBuilder } from "./expression-builder";
 
 export interface IndexQueryConfig {
   tableName?: string;
@@ -51,20 +50,21 @@ export class IndexQuery {
     scanIndexForward?: boolean;
     exclusiveStartKey?: any;
     skValue?: string;
-    filterExpression?: string;
-    expressionAttributeNames?: Record<string, string>;
-    expressionAttributeValues?: Record<string, any>;
+    filterBuilder?: ExpressionBuilder;
+    FilterExpression?: string;
+    ExpressionAttributeNames?: Record<string, string>;
+    ExpressionAttributeValues?: Record<string, any>;
   }): Promise<T[]> {
     const finalSkValue = options?.skValue || this.skValue;
 
     let keyCondition = "#pk = :pk";
-    const expressionAttributeNames: Record<string, string> = {
+    let expressionAttributeNames: Record<string, string> = {
       "#pk": this.pkName,
-      ...options?.expressionAttributeNames,
+      ...options?.ExpressionAttributeNames,
     };
-    const expressionAttributeValues: Record<string, any> = {
+    let expressionAttributeValues: Record<string, any> = {
       ":pk": this.pkValue,
-      ...options?.expressionAttributeValues,
+      ...options?.ExpressionAttributeValues,
     };
 
     if (finalSkValue) {
@@ -73,11 +73,20 @@ export class IndexQuery {
       expressionAttributeValues[":sk"] = finalSkValue;
     }
 
+    let filterExpression = options?.FilterExpression;
+
+    if (options?.filterBuilder) {
+        const { expression, attributeNames, attributeValues } = options.filterBuilder.build();
+        filterExpression = expression;
+        expressionAttributeNames = { ...expressionAttributeNames, ...attributeNames };
+        expressionAttributeValues = { ...expressionAttributeValues, ...attributeValues };
+    }
+
     const response = await this.db.query({
       TableName: this.tableName,
       IndexName: this.indexName,
       KeyConditionExpression: keyCondition,
-      FilterExpression: options?.filterExpression,
+      FilterExpression: filterExpression,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,
       Limit: options?.limit,
