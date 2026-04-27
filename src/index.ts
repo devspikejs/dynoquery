@@ -194,23 +194,7 @@ export class DynoQuery {
           },
         });
       } else {
-        const dataToSave: any = {};
-        for (const key in item) {
-          if (
-            Object.prototype.hasOwnProperty.call(item, key) &&
-            ![
-              "_indices",
-              "_partition",
-              "_skValue",
-              "_toBeDeleted",
-              "_filterBuilder",
-              "_conditionBuilder",
-            ].includes(key) &&
-            typeof item[key] !== "function"
-          ) {
-            dataToSave[key] = item[key];
-          }
-        }
+        const dataToSave = item.getData();
 
         // Ensure PK and SK are in the data
         dataToSave[this.pkName] = partition.getPkValue();
@@ -347,23 +331,7 @@ export class DynoQuery {
             Delete: deleteItem,
           };
         } else {
-          const dataToSave: any = {};
-          for (const key in item) {
-            if (
-              Object.prototype.hasOwnProperty.call(item, key) &&
-              ![
-                "_indices",
-                "_partition",
-                "_skValue",
-                "_toBeDeleted",
-                "_filterBuilder",
-                "_conditionBuilder",
-              ].includes(key) &&
-              typeof item[key] !== "function"
-            ) {
-              dataToSave[key] = item[key];
-            }
-          }
+          const dataToSave = item.getData();
 
           // Ensure PK and SK are in the data
           dataToSave[this.pkName] = pkValue;
