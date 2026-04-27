@@ -22,44 +22,32 @@ class Item {
             get(target, prop, receiver) {
                 if (prop === "save") {
                     return () => {
-                        var _a, _b, _c;
                         const dataToSave = {};
                         for (const key in target) {
                             if (Object.prototype.hasOwnProperty.call(target, key) &&
-                                !["_indices", "_partition", "_skValue", "_toBeDeleted"].includes(key) &&
+                                !["_indices", "_partition", "_skValue", "_toBeDeleted", "_filterBuilder", "_conditionBuilder"].includes(key) &&
                                 typeof target[key] !== "function") {
                                 dataToSave[key] = target[key];
                             }
                         }
                         return partition.update(skValue, dataToSave, self._indices, {
                             conditionBuilder: self._conditionBuilder,
-                            ConditionExpression: (_a = self._rawCondition) === null || _a === void 0 ? void 0 : _a.expression,
-                            ExpressionAttributeNames: (_b = self._rawCondition) === null || _b === void 0 ? void 0 : _b.names,
-                            ExpressionAttributeValues: (_c = self._rawCondition) === null || _c === void 0 ? void 0 : _c.values,
                         });
                     };
                 }
                 if (prop === "create") {
                     return (data, indices) => {
-                        var _a, _b, _c;
                         const dataToSave = data || {};
                         const finalIndices = indices || self._indices;
                         return partition.create(skValue, dataToSave, finalIndices, {
                             conditionBuilder: self._conditionBuilder,
-                            ConditionExpression: (_a = self._rawCondition) === null || _a === void 0 ? void 0 : _a.expression,
-                            ExpressionAttributeNames: (_b = self._rawCondition) === null || _b === void 0 ? void 0 : _b.names,
-                            ExpressionAttributeValues: (_c = self._rawCondition) === null || _c === void 0 ? void 0 : _c.values,
                         });
                     };
                 }
                 if (prop === "update") {
                     return (data, indices) => {
-                        var _a, _b, _c;
                         return partition.update(skValue, data, indices, {
                             conditionBuilder: self._conditionBuilder,
-                            ConditionExpression: (_a = self._rawCondition) === null || _a === void 0 ? void 0 : _a.expression,
-                            ExpressionAttributeNames: (_b = self._rawCondition) === null || _b === void 0 ? void 0 : _b.names,
-                            ExpressionAttributeValues: (_c = self._rawCondition) === null || _c === void 0 ? void 0 : _c.values,
                         });
                     };
                 }
@@ -72,7 +60,6 @@ class Item {
                 if (prop === "setCondition") {
                     return (builder) => {
                         self._conditionBuilder = builder;
-                        self._rawCondition = undefined;
                         return receiver;
                     };
                 }

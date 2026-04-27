@@ -184,7 +184,14 @@ class DynoQuery {
                     const dataToSave = {};
                     for (const key in item) {
                         if (Object.prototype.hasOwnProperty.call(item, key) &&
-                            !["_indices", "_partition", "_skValue", "_toBeDeleted"].includes(key) &&
+                            ![
+                                "_indices",
+                                "_partition",
+                                "_skValue",
+                                "_toBeDeleted",
+                                "_filterBuilder",
+                                "_conditionBuilder",
+                            ].includes(key) &&
                             typeof item[key] !== "function") {
                             dataToSave[key] = item[key];
                         }
@@ -269,6 +276,130 @@ class DynoQuery {
                             allItems.push(mappedItem);
                         });
                     }
+                }
+            }
+            return allItems;
+        });
+    }
+    /**
+     * Transact write items to the table.
+     */
+    transactWrite(items) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Chunk items into 100
+            for (let i = 0; i < items.length; i += 100) {
+                const chunk = items.slice(i, i + 100);
+                const transactItems = chunk.map((item) => {
+                    const partition = item.getPartition();
+                    const tableName = partition.getTableName();
+                    const skValue = item.getSkValue();
+                    const pkValue = partition.getPkValue();
+                    const conditionBuilder = item.getConditionBuilder();
+                    if (item.toBeDeleted()) {
+                        const deleteItem = {
+                            Key: {
+                                [this.pkName]: pkValue,
+                                [this.skName]: skValue,
+                            },
+                            TableName: tableName,
+                        };
+                        if (conditionBuilder) {
+                            const { expression, attributeNames, attributeValues } = conditionBuilder.build();
+                            deleteItem.ConditionExpression = expression;
+                            deleteItem.ExpressionAttributeNames = attributeNames;
+                            deleteItem.ExpressionAttributeValues = attributeValues;
+                        }
+                        return {
+                            Delete: deleteItem,
+                        };
+                    }
+                    else {
+                        const dataToSave = {};
+                        for (const key in item) {
+                            if (Object.prototype.hasOwnProperty.call(item, key) &&
+                                ![
+                                    "_indices",
+                                    "_partition",
+                                    "_skValue",
+                                    "_toBeDeleted",
+                                    "_filterBuilder",
+                                    "_conditionBuilder",
+                                ].includes(key) &&
+                                typeof item[key] !== "function") {
+                                dataToSave[key] = item[key];
+                            }
+                        }
+                        // Ensure PK and SK are in the data
+                        dataToSave[this.pkName] = pkValue;
+                        dataToSave[this.skName] = skValue;
+                        const putItem = {
+                            Item: dataToSave,
+                            TableName: tableName,
+                        };
+                        if (conditionBuilder) {
+                            const { expression, attributeNames, attributeValues } = conditionBuilder.build();
+                            putItem.ConditionExpression = expression;
+                            putItem.ExpressionAttributeNames = attributeNames;
+                            putItem.ExpressionAttributeValues = attributeValues;
+                        }
+                        return {
+                            Put: putItem,
+                        };
+                    }
+                });
+                yield this.docClient.send(new lib_dynamodb_1.TransactWriteCommand({
+                    TransactItems: transactItems,
+                }));
+            }
+            return items;
+        });
+    }
+    /**
+     * Transact get items from the table.
+     */
+    transactRead(items) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const allItems = [];
+            // Chunk items into 100
+            for (let i = 0; i < items.length; i += 100) {
+                const chunk = items.slice(i, i + 100);
+                const transactItems = chunk.map((item) => {
+                    let tableName;
+                    let pkValue;
+                    let skValue;
+                    if (item instanceof index_query_1.IndexQuery) {
+                        tableName = item.tableName;
+                        pkValue = item.getPkValue();
+                        skValue = item.getSkValue() || "";
+                    }
+                    else {
+                        const partition = item.getPartition();
+                        tableName = partition.getTableName();
+                        pkValue = partition.getPkValue();
+                        skValue = item.getSkValue();
+                    }
+                    return {
+                        Get: {
+                            TableName: tableName,
+                            Key: {
+                                [this.pkName]: pkValue,
+                                [this.skName]: skValue,
+                            },
+                        },
+                    };
+                });
+                const response = yield this.docClient.send(new lib_dynamodb_1.TransactGetCommand({
+                    TransactItems: transactItems,
+                }));
+                if (response.Responses) {
+                    response.Responses.forEach((res) => {
+                        if (res.Item) {
+                            allItems.push(this.mapItemToModelItem(res.Item));
+                        }
+                        else {
+                            allItems.push(null);
+                        }
+                    });
                 }
             }
             return allItems;

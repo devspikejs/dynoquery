@@ -68,6 +68,14 @@ export declare class DynoQuery {
      */
     batchRead(items: (Item | IndexQuery)[]): Promise<any[]>;
     /**
+     * Transact write items to the table.
+     */
+    transactWrite(items: Item[]): Promise<Item[]>;
+    /**
+     * Transact get items from the table.
+     */
+    transactRead(items: (Item | IndexQuery)[]): Promise<any[]>;
+    /**
      * Maps a raw DynamoDB item to a Model Item if it matches a registered model.
      */
     mapItemToModelItem(item: any): any;

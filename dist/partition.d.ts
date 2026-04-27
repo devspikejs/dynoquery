@@ -14,7 +14,6 @@ export declare class Item {
     private _toBeDeleted;
     private _filterBuilder?;
     private _conditionBuilder?;
-    private _rawCondition?;
     constructor(partition: Partition, skValue: string, data: any);
 }
 export declare class Partition {
