@@ -215,6 +215,33 @@ const userToDelete = db.User('john@example.com').draftDelete('METADATA');
 await db.batchWrite([userToDelete]);
 ```
 
+### 5. Transaction Operations
+
+DynoQuery supports `transactWrite` and `transactRead` for atomic operations across multiple items.
+
+```typescript
+// 1. Transaction Write (All operations succeed or all fail)
+const user1 = db.User('john@example.com', 'METADATA');
+user1.name = 'John Doe';
+
+const userToDelete = db.User('olduser@example.com').draftDelete('METADATA');
+
+// You can even set conditions for items in a transaction
+const criticalItem = db.User('admin@example.com', 'METADATA');
+criticalItem.lastLogin = new Date().toISOString();
+criticalItem.setCondition(attr('status').equals('ACTIVE'));
+
+await db.transactWrite([user1, userToDelete, criticalItem]);
+
+// 2. Transaction Read (Read multiple items atomically)
+const userDraft = db.User('john@example.com', 'METADATA');
+const items = await db.transactRead([userDraft]);
+
+if (items[0]) {
+  console.log('Found user:', items[0].name);
+}
+```
+
 ## Optional Configuration Parameters
 
 | Parameter | Type | Default | Description |
@@ -319,6 +346,8 @@ await johnMeta.save();
 - `scan(params)`: Low-level ScanCommand wrapper.
 - `batchWrite(items)`: Batch persists multiple `Item` objects.
 - `batchRead(items)`: Batch fetches multiple `Item` or `IndexQuery` objects.
+- `transactWrite(items)`: Performs atomic write operations (Put/Delete) for up to 100 items.
+- `transactRead(items)`: Performs atomic read operations (Get) for up to 100 items.
 - `[ModelName](id, skValue?)`: Returns a `Partition` instance for the given ID. If `skValue` is provided, returns an `Item` object directly.
 - `findBy[IndexName](id, skValue?)`: Returns an `IndexQuery` instance.
 

@@ -9,6 +9,8 @@ import {
   ScanCommand,
   BatchWriteCommand,
   BatchGetCommand,
+  TransactWriteCommand,
+  TransactGetCommand,
   PutCommandInput,
   GetCommandInput,
   UpdateCommandInput,
@@ -196,7 +198,14 @@ export class DynoQuery {
         for (const key in item) {
           if (
             Object.prototype.hasOwnProperty.call(item, key) &&
-            !["_indices", "_partition", "_skValue", "_toBeDeleted"].includes(key) &&
+            ![
+              "_indices",
+              "_partition",
+              "_skValue",
+              "_toBeDeleted",
+              "_filterBuilder",
+              "_conditionBuilder",
+            ].includes(key) &&
             typeof item[key] !== "function"
           ) {
             dataToSave[key] = item[key];
@@ -297,6 +306,147 @@ export class DynoQuery {
             allItems.push(mappedItem);
           });
         }
+      }
+    }
+
+    return allItems;
+  }
+
+  /**
+   * Transact write items to the table.
+   */
+  async transactWrite(items: Item[]) {
+    // Chunk items into 100
+    for (let i = 0; i < items.length; i += 100) {
+      const chunk = items.slice(i, i + 100);
+      const transactItems = chunk.map((item: any) => {
+        const partition = item.getPartition();
+        const tableName = partition.getTableName();
+        const skValue = item.getSkValue();
+        const pkValue = partition.getPkValue();
+
+        const conditionBuilder = item.getConditionBuilder();
+
+        if (item.toBeDeleted()) {
+          const deleteItem: any = {
+            Key: {
+              [this.pkName]: pkValue,
+              [this.skName]: skValue,
+            },
+            TableName: tableName,
+          };
+
+          if (conditionBuilder) {
+            const { expression, attributeNames, attributeValues } = conditionBuilder.build();
+            deleteItem.ConditionExpression = expression;
+            deleteItem.ExpressionAttributeNames = attributeNames;
+            deleteItem.ExpressionAttributeValues = attributeValues;
+          }
+
+          return {
+            Delete: deleteItem,
+          };
+        } else {
+          const dataToSave: any = {};
+          for (const key in item) {
+            if (
+              Object.prototype.hasOwnProperty.call(item, key) &&
+              ![
+                "_indices",
+                "_partition",
+                "_skValue",
+                "_toBeDeleted",
+                "_filterBuilder",
+                "_conditionBuilder",
+              ].includes(key) &&
+              typeof item[key] !== "function"
+            ) {
+              dataToSave[key] = item[key];
+            }
+          }
+
+          // Ensure PK and SK are in the data
+          dataToSave[this.pkName] = pkValue;
+          dataToSave[this.skName] = skValue;
+
+          const putItem: any = {
+            Item: dataToSave,
+            TableName: tableName,
+          };
+
+          if (conditionBuilder) {
+            const { expression, attributeNames, attributeValues } = conditionBuilder.build();
+            putItem.ConditionExpression = expression;
+            putItem.ExpressionAttributeNames = attributeNames;
+            putItem.ExpressionAttributeValues = attributeValues;
+          }
+
+          return {
+            Put: putItem,
+          };
+        }
+      });
+
+      await this.docClient.send(
+        new TransactWriteCommand({
+          TransactItems: transactItems,
+        })
+      );
+    }
+
+    return items;
+  }
+
+  /**
+   * Transact get items from the table.
+   */
+  async transactRead(items: (Item | IndexQuery)[]) {
+    const allItems: any[] = [];
+
+    // Chunk items into 100
+    for (let i = 0; i < items.length; i += 100) {
+      const chunk = items.slice(i, i + 100);
+      const transactItems = chunk.map((item: any) => {
+        let tableName: string;
+        let pkValue: string;
+        let skValue: string;
+
+        if (item instanceof IndexQuery) {
+          tableName = (item as any).tableName;
+          pkValue = item.getPkValue();
+          skValue = item.getSkValue() || "";
+        } else {
+          const partition = item.getPartition();
+          tableName = partition.getTableName();
+          pkValue = partition.getPkValue();
+          skValue = item.getSkValue();
+        }
+
+        return {
+          Get: {
+            TableName: tableName,
+            Key: {
+              [this.pkName]: pkValue,
+              [this.skName]: skValue,
+            },
+          },
+        };
+      });
+
+      const response = await this.docClient.send(
+        new TransactGetCommand({
+          TransactItems: transactItems,
+        })
+      );
+
+      if (response.Responses) {
+        response.Responses.forEach((res: any) => {
+          if (res.Item) {
+            allItems.push(this.mapItemToModelItem(res.Item));
+          } else {
+            allItems.push(null);
+          }
+        });
       }
     }
 
