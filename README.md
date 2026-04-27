@@ -259,6 +259,55 @@ if (token) {
 }
 ```
 
+### Expression Builder (Filters & Conditions)
+
+Use `ExpressionBuilder` to build complex filter and condition expressions in a type-safe way.
+
+```typescript
+import { attr, ExpressionBuilder } from 'dynoquery';
+
+// 1. Filtering in queries
+const builder = attr('age').greaterThan(25).and(attr('status').equals('ACTIVE'));
+const activeUsers = await db.User('some-id').getAll({ filterBuilder: builder });
+
+// 2. Conditional Updates
+const johnMeta = db.User('john@example.com', 'METADATA');
+const condition = attr('version').equals(1);
+
+johnMeta.setCondition(condition);
+johnMeta.name = 'John New Name';
+johnMeta.version = 2;
+
+await johnMeta.save(); // Fails if version is not 1
+
+// 3. Raw Condition Expressions
+await db.User('john@example.com').update({ status: 'INACTIVE' }, [], {
+  conditionExpression: '#v = :v',
+  expressionAttributeNames: { '#v': 'version' },
+  expressionAttributeValues: { ':v': 2 }
+});
+
+// Or using Item object
+johnMeta.setCondition(attr('name').exists());
+await johnMeta.save();
+
+// 4. Supported Operators
+// - attr('name').equals('val') / notEquals('val')
+// - .lessThan(val) / lessThanOrEqual(val)
+// - .greaterThan(val) / greaterThanOrEqual(val)
+// - .between(start, end)
+// - .in([val1, val2])
+// - logical: .and(otherBuilder), .or(otherBuilder), ExpressionBuilder.not(builder)
+
+// 4. Supported Functions
+// - attr('field').exists()
+// - attr('field').notExists()
+// - attr('field').type('S')
+// - attr('field').beginsWith('prefix')
+// - attr('field').contains('value')
+// - attr('field').size().greaterThan(5)
+```
+
 ## API Reference
 
 ### DynoQuery
@@ -275,10 +324,10 @@ if (token) {
 
 ### Partition
 - `get(skValue)`: Fetches data for a specific Sort Key value (returns a Promise).
-- `getAll(options?)`: Fetches items in the partition. Options: `{ limit, exclusiveStartKey }`.
-- `create(skValue, data, indices?)`: Creates an item. `indices` is an array of `IndexQuery` for GSI population.
-- `update(skValue, data)`: Partial update of an item.
-- `delete(skValue)`: Deletes an item.
+- `getAll(options?)`: Fetches items in the partition. Options: `{ limit, exclusiveStartKey, filterExpression, filterBuilder }`.
+- `create(skValue, data, indices?, options?)`: Creates an item. `options`: `{ conditionBuilder, conditionExpression, expressionAttributeNames, expressionAttributeValues }`.
+- `update(skValue, data, indices?, options?)`: Partial update of an item. `options`: `{ conditionBuilder, conditionExpression, expressionAttributeNames, expressionAttributeValues }`.
+- `delete(skValue, options?)`: Deletes an item. `options`: `{ conditionBuilder, conditionExpression, expressionAttributeNames, expressionAttributeValues }`.
 - `draft(skValue, data?)`: Returns an `Item` object initialized with `data` (optional).
 - `draftDelete(skValue)`: Returns an `Item` object marked for deletion (for use with `batchWrite`).
 - `deleteAll()`: Deletes all items in the partition.
@@ -286,14 +335,16 @@ if (token) {
 
 ### IndexQuery
 - `get(skValue?)`: Get a single item from the index.
-- `getAll(options?)`: Query index. Options: `{ limit, scanIndexForward, exclusiveStartKey, skValue }`.
+- `getAll(options?)`: Query index. Options: `{ limit, scanIndexForward, exclusiveStartKey, skValue, filterExpression, filterBuilder }`.
 - `getLastEvaluatedKey()`: Returns the pagination token from the last `getAll()`.
 
 ### Item (returned by Partition.get or draft)
-- `create(data?, indices?)`: Persists the item as a new record with the provided data. Supports GSI indices.
-- `update(data, indices?)`: Partial update of the item. Supports GSI indices.
-- `save()`: Persists the current state of the item (alias for update of all properties). Uses indices attached via `setIndex()`.
-- `setIndex(indices)`: Attaches one or more `IndexQuery` objects to the item for use with `save()` or `create()`.
+- `create(data?, indices?)`: Persists the item as a new record with the provided data. Supports GSI indices and internal `conditionBuilder`.
+- `update(data, indices?)`: Partial update of the item. Supports GSI indices and internal `conditionBuilder`.
+- `save()`: Persists the current state of the item. Uses indices attached via `setIndex()` and internal `conditionBuilder`.
+- `setIndex(indices)`: Attaches one or more `IndexQuery` objects to the item.
+- `setFilter(builder)`: Sets a filter expression builder for the item.
+- `setCondition(builder)`: Sets a condition for the item using an `ExpressionBuilder`.
 
 ## License
 
