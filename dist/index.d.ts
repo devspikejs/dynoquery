@@ -1,6 +1,8 @@
 import { PutCommandInput, GetCommandInput, UpdateCommandInput, DeleteCommandInput, QueryCommandInput, ScanCommandInput } from "@aws-sdk/lib-dynamodb";
 import { Item } from "./partition";
 import { IndexQuery } from "./index-query";
+import { ExpressionBuilder, attr } from "./expression-builder";
+export { ExpressionBuilder, attr };
 export interface DynoQueryConfig {
     tableName?: string;
     pkName?: string;

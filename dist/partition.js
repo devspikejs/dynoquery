@@ -22,6 +22,7 @@ class Item {
             get(target, prop, receiver) {
                 if (prop === "save") {
                     return () => {
+                        var _a, _b, _c;
                         const dataToSave = {};
                         for (const key in target) {
                             if (Object.prototype.hasOwnProperty.call(target, key) &&
@@ -30,20 +31,56 @@ class Item {
                                 dataToSave[key] = target[key];
                             }
                         }
-                        return partition.update(skValue, dataToSave, self._indices);
+                        return partition.update(skValue, dataToSave, self._indices, {
+                            conditionBuilder: self._conditionBuilder,
+                            ConditionExpression: (_a = self._rawCondition) === null || _a === void 0 ? void 0 : _a.expression,
+                            ExpressionAttributeNames: (_b = self._rawCondition) === null || _b === void 0 ? void 0 : _b.names,
+                            ExpressionAttributeValues: (_c = self._rawCondition) === null || _c === void 0 ? void 0 : _c.values,
+                        });
                     };
                 }
                 if (prop === "create") {
                     return (data, indices) => {
+                        var _a, _b, _c;
                         const dataToSave = data || {};
                         const finalIndices = indices || self._indices;
-                        return partition.create(skValue, dataToSave, finalIndices);
+                        return partition.create(skValue, dataToSave, finalIndices, {
+                            conditionBuilder: self._conditionBuilder,
+                            ConditionExpression: (_a = self._rawCondition) === null || _a === void 0 ? void 0 : _a.expression,
+                            ExpressionAttributeNames: (_b = self._rawCondition) === null || _b === void 0 ? void 0 : _b.names,
+                            ExpressionAttributeValues: (_c = self._rawCondition) === null || _c === void 0 ? void 0 : _c.values,
+                        });
                     };
                 }
                 if (prop === "update") {
                     return (data, indices) => {
-                        return partition.update(skValue, data, indices);
+                        var _a, _b, _c;
+                        return partition.update(skValue, data, indices, {
+                            conditionBuilder: self._conditionBuilder,
+                            ConditionExpression: (_a = self._rawCondition) === null || _a === void 0 ? void 0 : _a.expression,
+                            ExpressionAttributeNames: (_b = self._rawCondition) === null || _b === void 0 ? void 0 : _b.names,
+                            ExpressionAttributeValues: (_c = self._rawCondition) === null || _c === void 0 ? void 0 : _c.values,
+                        });
                     };
+                }
+                if (prop === "setFilter") {
+                    return (builder) => {
+                        self._filterBuilder = builder;
+                        return receiver;
+                    };
+                }
+                if (prop === "setCondition") {
+                    return (builder) => {
+                        self._conditionBuilder = builder;
+                        self._rawCondition = undefined;
+                        return receiver;
+                    };
+                }
+                if (prop === "getFilterBuilder") {
+                    return () => self._filterBuilder;
+                }
+                if (prop === "getConditionBuilder") {
+                    return () => self._conditionBuilder;
                 }
                 if (prop === "setIndex") {
                     return (indexObj) => {
@@ -118,12 +155,21 @@ class Partition {
      */
     getAll(options) {
         return __awaiter(this, void 0, void 0, function* () {
+            let filterExpression = options === null || options === void 0 ? void 0 : options.FilterExpression;
+            let expressionAttributeNames = Object.assign({ "#pk": this.pkName }, options === null || options === void 0 ? void 0 : options.ExpressionAttributeNames);
+            let expressionAttributeValues = Object.assign({ ":pk": this.pkValue }, options === null || options === void 0 ? void 0 : options.ExpressionAttributeValues);
+            if (options === null || options === void 0 ? void 0 : options.filterBuilder) {
+                const { expression, attributeNames, attributeValues } = options.filterBuilder.build();
+                filterExpression = expression;
+                expressionAttributeNames = Object.assign(Object.assign({}, expressionAttributeNames), attributeNames);
+                expressionAttributeValues = Object.assign(Object.assign({}, expressionAttributeValues), attributeValues);
+            }
             const response = yield this.db.query({
                 TableName: this.tableName,
                 KeyConditionExpression: "#pk = :pk",
-                FilterExpression: options === null || options === void 0 ? void 0 : options.filterExpression,
-                ExpressionAttributeNames: Object.assign({ "#pk": this.pkName }, options === null || options === void 0 ? void 0 : options.expressionAttributeNames),
-                ExpressionAttributeValues: Object.assign({ ":pk": this.pkValue }, options === null || options === void 0 ? void 0 : options.expressionAttributeValues),
+                FilterExpression: filterExpression,
+                ExpressionAttributeNames: expressionAttributeNames,
+                ExpressionAttributeValues: expressionAttributeValues,
                 Limit: options === null || options === void 0 ? void 0 : options.limit,
                 ExclusiveStartKey: options === null || options === void 0 ? void 0 : options.exclusiveStartKey,
             });
@@ -143,7 +189,7 @@ class Partition {
     /**
      * Create an item in this partition.
      */
-    create(skValue, data, indices) {
+    create(skValue, data, indices, options) {
         return __awaiter(this, void 0, void 0, function* () {
             const item = Object.assign({ [this.pkName]: this.pkValue, [this.skName]: skValue }, data);
             if (indices) {
@@ -154,10 +200,22 @@ class Partition {
                     }
                 });
             }
-            yield this.db.create({
+            const createParams = {
                 TableName: this.tableName,
                 Item: item,
-            });
+            };
+            if (options === null || options === void 0 ? void 0 : options.conditionBuilder) {
+                const { expression, attributeNames, attributeValues } = options.conditionBuilder.build();
+                createParams.ConditionExpression = expression;
+                createParams.ExpressionAttributeNames = Object.assign(Object.assign({}, createParams.ExpressionAttributeNames), attributeNames);
+                createParams.ExpressionAttributeValues = Object.assign(Object.assign({}, createParams.ExpressionAttributeValues), attributeValues);
+            }
+            if (options === null || options === void 0 ? void 0 : options.ConditionExpression) {
+                createParams.ConditionExpression = options.ConditionExpression;
+                createParams.ExpressionAttributeNames = Object.assign(Object.assign({}, createParams.ExpressionAttributeNames), options.ExpressionAttributeNames);
+                createParams.ExpressionAttributeValues = Object.assign(Object.assign({}, createParams.ExpressionAttributeValues), options.ExpressionAttributeValues);
+            }
+            yield this.db.create(createParams);
             this.cache[skValue] = item;
             return new Item(this, skValue, item);
         });
@@ -190,25 +248,37 @@ class Partition {
     /**
      * Update an existing item in this partition.
      */
-    update(skValue, data, indices) {
+    update(skValue, data, indices, options) {
         return __awaiter(this, void 0, void 0, function* () {
             const current = (yield this._getRaw(skValue)) || {};
             const updated = Object.assign(Object.assign({}, current), data);
-            return yield this.create(skValue, updated, indices);
+            return yield this.create(skValue, updated, indices, options);
         });
     }
     /**
      * Delete an item by its SK within this partition.
      */
-    delete(skValue) {
+    delete(skValue, options) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.db.delete({
+            const deleteParams = {
                 TableName: this.tableName,
                 Key: {
                     [this.pkName]: this.pkValue,
                     [this.skName]: skValue,
                 },
-            });
+            };
+            if (options === null || options === void 0 ? void 0 : options.conditionBuilder) {
+                const { expression, attributeNames, attributeValues } = options.conditionBuilder.build();
+                deleteParams.ConditionExpression = expression;
+                deleteParams.ExpressionAttributeNames = Object.assign(Object.assign({}, deleteParams.ExpressionAttributeNames), attributeNames);
+                deleteParams.ExpressionAttributeValues = Object.assign(Object.assign({}, deleteParams.ExpressionAttributeValues), attributeValues);
+            }
+            if (options === null || options === void 0 ? void 0 : options.ConditionExpression) {
+                deleteParams.ConditionExpression = options.ConditionExpression;
+                deleteParams.ExpressionAttributeNames = Object.assign(Object.assign({}, deleteParams.ExpressionAttributeNames), options.ExpressionAttributeNames);
+                deleteParams.ExpressionAttributeValues = Object.assign(Object.assign({}, deleteParams.ExpressionAttributeValues), options.ExpressionAttributeValues);
+            }
+            yield this.db.delete(deleteParams);
             delete this.cache[skValue];
         });
     }

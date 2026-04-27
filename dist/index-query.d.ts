@@ -1,4 +1,5 @@
 import { DynoQuery } from "./index";
+import { ExpressionBuilder } from "./expression-builder";
 export interface IndexQueryConfig {
     tableName?: string;
     indexName: string;
@@ -23,9 +24,10 @@ export declare class IndexQuery {
         scanIndexForward?: boolean;
         exclusiveStartKey?: any;
         skValue?: string;
-        filterExpression?: string;
-        expressionAttributeNames?: Record<string, string>;
-        expressionAttributeValues?: Record<string, any>;
+        filterBuilder?: ExpressionBuilder;
+        FilterExpression?: string;
+        ExpressionAttributeNames?: Record<string, string>;
+        ExpressionAttributeValues?: Record<string, any>;
     }): Promise<T[]>;
     get<T = any>(skValue?: string): Promise<T | null>;
     getPkValue(): string;

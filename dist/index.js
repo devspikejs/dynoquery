@@ -34,11 +34,14 @@ var __rest = (this && this.__rest) || function (s, e) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Item = exports.DynoQuery = void 0;
+exports.Item = exports.DynoQuery = exports.attr = exports.ExpressionBuilder = void 0;
 const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
 const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
 const partition_1 = require("./partition");
 const index_query_1 = require("./index-query");
+const expression_builder_1 = require("./expression-builder");
+Object.defineProperty(exports, "ExpressionBuilder", { enumerable: true, get: function () { return expression_builder_1.ExpressionBuilder; } });
+Object.defineProperty(exports, "attr", { enumerable: true, get: function () { return expression_builder_1.attr; } });
 class DynoQuery {
     constructor(config = {}) {
         this.registeredModels = {};

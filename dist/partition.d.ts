@@ -1,5 +1,6 @@
 import { DynoQuery } from "./index";
 import { IndexQuery } from "./index-query";
+import { ExpressionBuilder } from "./expression-builder";
 export interface PartitionConfig {
     tableName?: string;
     pk?: string;
@@ -11,6 +12,9 @@ export declare class Item {
     private _partition;
     private _skValue;
     private _toBeDeleted;
+    private _filterBuilder?;
+    private _conditionBuilder?;
+    private _rawCondition?;
     constructor(partition: Partition, skValue: string, data: any);
 }
 export declare class Partition {
@@ -30,14 +34,20 @@ export declare class Partition {
     getAll<T = any>(options?: {
         limit?: number;
         exclusiveStartKey?: any;
-        filterExpression?: string;
-        expressionAttributeNames?: Record<string, string>;
-        expressionAttributeValues?: Record<string, any>;
+        filterBuilder?: ExpressionBuilder;
+        FilterExpression?: string;
+        ExpressionAttributeNames?: Record<string, string>;
+        ExpressionAttributeValues?: Record<string, any>;
     }): Promise<T[]>;
     /**
      * Create an item in this partition.
      */
-    create<T = any>(skValue: string, data: T, indices?: IndexQuery[]): Promise<T>;
+    create<T = any>(skValue: string, data: T, indices?: IndexQuery[], options?: {
+        conditionBuilder?: ExpressionBuilder;
+        ConditionExpression?: string;
+        ExpressionAttributeNames?: Record<string, string>;
+        ExpressionAttributeValues?: Record<string, any>;
+    }): Promise<T>;
     /**
      * Internal method to get raw data for a specific SK.
      */
@@ -45,11 +55,21 @@ export declare class Partition {
     /**
      * Update an existing item in this partition.
      */
-    update<T = any>(skValue: string, data: Partial<T>, indices?: IndexQuery[]): Promise<T>;
+    update<T = any>(skValue: string, data: Partial<T>, indices?: IndexQuery[], options?: {
+        conditionBuilder?: ExpressionBuilder;
+        ConditionExpression?: string;
+        ExpressionAttributeNames?: Record<string, string>;
+        ExpressionAttributeValues?: Record<string, any>;
+    }): Promise<T>;
     /**
      * Delete an item by its SK within this partition.
      */
-    delete(skValue: string): Promise<void>;
+    delete(skValue: string, options?: {
+        conditionBuilder?: ExpressionBuilder;
+        ConditionExpression?: string;
+        ExpressionAttributeNames?: Record<string, string>;
+        ExpressionAttributeValues?: Record<string, any>;
+    }): Promise<void>;
     /**
      * Get data for a specific SK and return it wrapped in a Item object.
      */

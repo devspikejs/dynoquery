@@ -34,18 +34,25 @@ class IndexQuery {
         return __awaiter(this, void 0, void 0, function* () {
             const finalSkValue = (options === null || options === void 0 ? void 0 : options.skValue) || this.skValue;
             let keyCondition = "#pk = :pk";
-            const expressionAttributeNames = Object.assign({ "#pk": this.pkName }, options === null || options === void 0 ? void 0 : options.expressionAttributeNames);
-            const expressionAttributeValues = Object.assign({ ":pk": this.pkValue }, options === null || options === void 0 ? void 0 : options.expressionAttributeValues);
+            let expressionAttributeNames = Object.assign({ "#pk": this.pkName }, options === null || options === void 0 ? void 0 : options.ExpressionAttributeNames);
+            let expressionAttributeValues = Object.assign({ ":pk": this.pkValue }, options === null || options === void 0 ? void 0 : options.ExpressionAttributeValues);
             if (finalSkValue) {
                 keyCondition += " AND begins_with(#sk, :sk)";
                 expressionAttributeNames["#sk"] = this.skName;
                 expressionAttributeValues[":sk"] = finalSkValue;
             }
+            let filterExpression = options === null || options === void 0 ? void 0 : options.FilterExpression;
+            if (options === null || options === void 0 ? void 0 : options.filterBuilder) {
+                const { expression, attributeNames, attributeValues } = options.filterBuilder.build();
+                filterExpression = expression;
+                expressionAttributeNames = Object.assign(Object.assign({}, expressionAttributeNames), attributeNames);
+                expressionAttributeValues = Object.assign(Object.assign({}, expressionAttributeValues), attributeValues);
+            }
             const response = yield this.db.query({
                 TableName: this.tableName,
                 IndexName: this.indexName,
                 KeyConditionExpression: keyCondition,
-                FilterExpression: options === null || options === void 0 ? void 0 : options.filterExpression,
+                FilterExpression: filterExpression,
                 ExpressionAttributeNames: expressionAttributeNames,
                 ExpressionAttributeValues: expressionAttributeValues,
                 Limit: options === null || options === void 0 ? void 0 : options.limit,
