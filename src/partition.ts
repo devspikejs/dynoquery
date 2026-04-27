@@ -16,11 +16,6 @@ export class Item {
   private _toBeDeleted: boolean;
   private _filterBuilder?: ExpressionBuilder;
   private _conditionBuilder?: ExpressionBuilder;
-  private _rawCondition?: {
-    expression: string;
-    names?: Record<string, string>;
-    values?: Record<string, any>;
-  };
 
   constructor(partition: Partition, skValue: string, data: any) {
     this._partition = partition;
@@ -37,7 +32,7 @@ export class Item {
             for (const key in target) {
               if (
                 Object.prototype.hasOwnProperty.call(target, key) &&
-                !["_indices", "_partition", "_skValue", "_toBeDeleted"].includes(key) &&
+                !["_indices", "_partition", "_skValue", "_toBeDeleted", "_filterBuilder", "_conditionBuilder"].includes(key) &&
                 typeof target[key] !== "function"
               ) {
                 dataToSave[key] = target[key];
@@ -45,9 +40,6 @@ export class Item {
             }
             return partition.update(skValue, dataToSave, self._indices, {
               conditionBuilder: self._conditionBuilder,
-              ConditionExpression: self._rawCondition?.expression,
-              ExpressionAttributeNames: self._rawCondition?.names,
-              ExpressionAttributeValues: self._rawCondition?.values,
             });
           };
         }
@@ -57,9 +49,6 @@ export class Item {
             const finalIndices = indices || self._indices;
             return partition.create(skValue, dataToSave, finalIndices, {
               conditionBuilder: self._conditionBuilder,
-              ConditionExpression: self._rawCondition?.expression,
-              ExpressionAttributeNames: self._rawCondition?.names,
-              ExpressionAttributeValues: self._rawCondition?.values,
             });
           };
         }
@@ -67,9 +56,6 @@ export class Item {
           return (data: any, indices?: IndexQuery[]) => {
             return partition.update(skValue, data, indices, {
               conditionBuilder: self._conditionBuilder,
-              ConditionExpression: self._rawCondition?.expression,
-              ExpressionAttributeNames: self._rawCondition?.names,
-              ExpressionAttributeValues: self._rawCondition?.values,
             });
           };
         }
@@ -82,7 +68,6 @@ export class Item {
         if (prop === "setCondition") {
           return (builder: ExpressionBuilder) => {
             self._conditionBuilder = builder;
-            self._rawCondition = undefined;
             return receiver;
           };
         }
