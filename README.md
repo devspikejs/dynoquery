@@ -371,6 +371,7 @@ await johnMeta.save();
 - `create(data?, indices?)`: Persists the item as a new record with the provided data. Supports GSI indices and internal `conditionBuilder`.
 - `update(data, indices?)`: Partial update of the item. Supports GSI indices and internal `conditionBuilder`.
 - `save()`: Persists the current state of the item. Uses indices attached via `setIndex()` and internal `conditionBuilder`.
+- `getData()`: Returns a clean data object containing only the database attributes (filters out internal state and methods).
 - `setIndex(indices)`: Attaches one or more `IndexQuery` objects to the item.
 - `setFilter(builder)`: Sets a filter expression builder for the item.
 - `setCondition(builder)`: Sets a condition for the item using an `ExpressionBuilder`.
