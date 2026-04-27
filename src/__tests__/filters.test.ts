@@ -36,9 +36,9 @@ describe("Filters in getAll()", () => {
       mockSend.mockResolvedValueOnce({ Items: mockItems });
 
       const result = await userPartition.getAll({
-        filterExpression: "#status = :status",
-        expressionAttributeNames: { "#status": "status" },
-        expressionAttributeValues: { ":status": "active" },
+        FilterExpression: "#status = :status",
+        ExpressionAttributeNames: { "#status": "status" },
+        ExpressionAttributeValues: { ":status": "active" },
       });
 
       expect(result).toHaveLength(1);
@@ -74,9 +74,9 @@ describe("Filters in getAll()", () => {
       mockSend.mockResolvedValueOnce({ Items: mockItems });
 
       const result = await indexQuery.getAll({
-        filterExpression: "#role = :role",
-        expressionAttributeNames: { "#role": "role" },
-        expressionAttributeValues: { ":role": "admin" },
+        FilterExpression: "#role = :role",
+        ExpressionAttributeNames: { "#role": "role" },
+        ExpressionAttributeValues: { ":role": "admin" },
       });
 
       expect(result).toEqual(mockItems);
@@ -110,9 +110,9 @@ describe("Filters in getAll()", () => {
       mockSend.mockResolvedValueOnce({ Items: mockItems });
 
       const result = await indexQuery.getAll({
-        filterExpression: "#role = :role",
-        expressionAttributeNames: { "#role": "role" },
-        expressionAttributeValues: { ":role": "admin" },
+        FilterExpression: "#role = :role",
+        ExpressionAttributeNames: { "#role": "role" },
+        ExpressionAttributeValues: { ":role": "admin" },
       });
 
       expect(result).toEqual(mockItems);

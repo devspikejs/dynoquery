@@ -45,9 +45,9 @@ export class Item {
             }
             return partition.update(skValue, dataToSave, self._indices, {
               conditionBuilder: self._conditionBuilder,
-              conditionExpression: self._rawCondition?.expression,
-              expressionAttributeNames: self._rawCondition?.names,
-              expressionAttributeValues: self._rawCondition?.values,
+              ConditionExpression: self._rawCondition?.expression,
+              ExpressionAttributeNames: self._rawCondition?.names,
+              ExpressionAttributeValues: self._rawCondition?.values,
             });
           };
         }
@@ -57,9 +57,9 @@ export class Item {
             const finalIndices = indices || self._indices;
             return partition.create(skValue, dataToSave, finalIndices, {
               conditionBuilder: self._conditionBuilder,
-              conditionExpression: self._rawCondition?.expression,
-              expressionAttributeNames: self._rawCondition?.names,
-              expressionAttributeValues: self._rawCondition?.values,
+              ConditionExpression: self._rawCondition?.expression,
+              ExpressionAttributeNames: self._rawCondition?.names,
+              ExpressionAttributeValues: self._rawCondition?.values,
             });
           };
         }
@@ -67,9 +67,9 @@ export class Item {
           return (data: any, indices?: IndexQuery[]) => {
             return partition.update(skValue, data, indices, {
               conditionBuilder: self._conditionBuilder,
-              conditionExpression: self._rawCondition?.expression,
-              expressionAttributeNames: self._rawCondition?.names,
-              expressionAttributeValues: self._rawCondition?.values,
+              ConditionExpression: self._rawCondition?.expression,
+              ExpressionAttributeNames: self._rawCondition?.names,
+              ExpressionAttributeValues: self._rawCondition?.values,
             });
           };
         }
@@ -178,19 +178,19 @@ export class Partition {
   async getAll<T = any>(options?: {
     limit?: number;
     exclusiveStartKey?: any;
-    filterExpression?: string;
     filterBuilder?: ExpressionBuilder;
-    expressionAttributeNames?: Record<string, string>;
-    expressionAttributeValues?: Record<string, any>;
+    FilterExpression?: string;
+    ExpressionAttributeNames?: Record<string, string>;
+    ExpressionAttributeValues?: Record<string, any>;
   }): Promise<T[]> {
-    let filterExpression = options?.filterExpression;
+    let filterExpression = options?.FilterExpression;
     let expressionAttributeNames: Record<string, string> = {
       "#pk": this.pkName,
-      ...options?.expressionAttributeNames,
+      ...options?.ExpressionAttributeNames,
     };
     let expressionAttributeValues: Record<string, any> = {
       ":pk": this.pkValue,
-      ...options?.expressionAttributeValues,
+      ...options?.ExpressionAttributeValues,
     };
 
     if (options?.filterBuilder) {
@@ -235,9 +235,9 @@ export class Partition {
     indices?: IndexQuery[],
     options?: {
       conditionBuilder?: ExpressionBuilder;
-      conditionExpression?: string;
-      expressionAttributeNames?: Record<string, string>;
-      expressionAttributeValues?: Record<string, any>;
+      ConditionExpression?: string;
+      ExpressionAttributeNames?: Record<string, string>;
+      ExpressionAttributeValues?: Record<string, any>;
     }
   ): Promise<T> {
     const item: any = {
@@ -273,15 +273,15 @@ export class Partition {
       };
     }
 
-    if (options?.conditionExpression) {
-      createParams.ConditionExpression = options.conditionExpression;
+    if (options?.ConditionExpression) {
+      createParams.ConditionExpression = options.ConditionExpression;
       createParams.ExpressionAttributeNames = {
         ...createParams.ExpressionAttributeNames,
-        ...options.expressionAttributeNames,
+        ...options.ExpressionAttributeNames,
       };
       createParams.ExpressionAttributeValues = {
         ...createParams.ExpressionAttributeValues,
-        ...options.expressionAttributeValues,
+        ...options.ExpressionAttributeValues,
       };
     }
 
@@ -326,9 +326,9 @@ export class Partition {
     indices?: IndexQuery[],
     options?: {
       conditionBuilder?: ExpressionBuilder;
-      conditionExpression?: string;
-      expressionAttributeNames?: Record<string, string>;
-      expressionAttributeValues?: Record<string, any>;
+      ConditionExpression?: string;
+      ExpressionAttributeNames?: Record<string, string>;
+      ExpressionAttributeValues?: Record<string, any>;
     }
   ): Promise<T> {
     const current = await this._getRaw(skValue) || {};
@@ -343,9 +343,9 @@ export class Partition {
     skValue: string,
     options?: {
       conditionBuilder?: ExpressionBuilder;
-      conditionExpression?: string;
-      expressionAttributeNames?: Record<string, string>;
-      expressionAttributeValues?: Record<string, any>;
+      ConditionExpression?: string;
+      ExpressionAttributeNames?: Record<string, string>;
+      ExpressionAttributeValues?: Record<string, any>;
     }
   ): Promise<void> {
     const deleteParams: any = {
@@ -369,15 +369,15 @@ export class Partition {
       };
     }
 
-    if (options?.conditionExpression) {
-      deleteParams.ConditionExpression = options.conditionExpression;
+    if (options?.ConditionExpression) {
+      deleteParams.ConditionExpression = options.ConditionExpression;
       deleteParams.ExpressionAttributeNames = {
         ...deleteParams.ExpressionAttributeNames,
-        ...options.expressionAttributeNames,
+        ...options.ExpressionAttributeNames,
       };
       deleteParams.ExpressionAttributeValues = {
         ...deleteParams.ExpressionAttributeValues,
-        ...options.expressionAttributeValues,
+        ...options.ExpressionAttributeValues,
       };
     }
 

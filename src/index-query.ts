@@ -50,21 +50,21 @@ export class IndexQuery {
     scanIndexForward?: boolean;
     exclusiveStartKey?: any;
     skValue?: string;
-    filterExpression?: string;
     filterBuilder?: ExpressionBuilder;
-    expressionAttributeNames?: Record<string, string>;
-    expressionAttributeValues?: Record<string, any>;
+    FilterExpression?: string;
+    ExpressionAttributeNames?: Record<string, string>;
+    ExpressionAttributeValues?: Record<string, any>;
   }): Promise<T[]> {
     const finalSkValue = options?.skValue || this.skValue;
 
     let keyCondition = "#pk = :pk";
     let expressionAttributeNames: Record<string, string> = {
       "#pk": this.pkName,
-      ...options?.expressionAttributeNames,
+      ...options?.ExpressionAttributeNames,
     };
     let expressionAttributeValues: Record<string, any> = {
       ":pk": this.pkValue,
-      ...options?.expressionAttributeValues,
+      ...options?.ExpressionAttributeValues,
     };
 
     if (finalSkValue) {
@@ -73,7 +73,7 @@ export class IndexQuery {
       expressionAttributeValues[":sk"] = finalSkValue;
     }
 
-    let filterExpression = options?.filterExpression;
+    let filterExpression = options?.FilterExpression;
 
     if (options?.filterBuilder) {
         const { expression, attributeNames, attributeValues } = options.filterBuilder.build();

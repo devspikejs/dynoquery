@@ -282,9 +282,9 @@ await johnMeta.save(); // Fails if version is not 1
 
 // 3. Raw Condition Expressions
 await db.User('john@example.com').update({ status: 'INACTIVE' }, [], {
-  conditionExpression: '#v = :v',
-  expressionAttributeNames: { '#v': 'version' },
-  expressionAttributeValues: { ':v': 2 }
+  ConditionExpression: '#v = :v',
+  ExpressionAttributeNames: { '#v': 'version' },
+  ExpressionAttributeValues: { ':v': 2 }
 });
 
 // Or using Item object
@@ -324,10 +324,10 @@ await johnMeta.save();
 
 ### Partition
 - `get(skValue)`: Fetches data for a specific Sort Key value (returns a Promise).
-- `getAll(options?)`: Fetches items in the partition. Options: `{ limit, exclusiveStartKey, filterExpression, filterBuilder }`.
-- `create(skValue, data, indices?, options?)`: Creates an item. `options`: `{ conditionBuilder, conditionExpression, expressionAttributeNames, expressionAttributeValues }`.
-- `update(skValue, data, indices?, options?)`: Partial update of an item. `options`: `{ conditionBuilder, conditionExpression, expressionAttributeNames, expressionAttributeValues }`.
-- `delete(skValue, options?)`: Deletes an item. `options`: `{ conditionBuilder, conditionExpression, expressionAttributeNames, expressionAttributeValues }`.
+- `getAll(options?)`: Fetches items in the partition. Options: `{ limit, exclusiveStartKey, filterBuilder, FilterExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
+- `create(skValue, data, indices?, options?)`: Creates an item. `options`: `{ conditionBuilder, ConditionExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
+- `update(skValue, data, indices?, options?)`: Partial update of an item. `options`: `{ conditionBuilder, ConditionExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
+- `delete(skValue, options?)`: Deletes an item. `options`: `{ conditionBuilder, ConditionExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
 - `draft(skValue, data?)`: Returns an `Item` object initialized with `data` (optional).
 - `draftDelete(skValue)`: Returns an `Item` object marked for deletion (for use with `batchWrite`).
 - `deleteAll()`: Deletes all items in the partition.
@@ -335,7 +335,7 @@ await johnMeta.save();
 
 ### IndexQuery
 - `get(skValue?)`: Get a single item from the index.
-- `getAll(options?)`: Query index. Options: `{ limit, scanIndexForward, exclusiveStartKey, skValue, filterExpression, filterBuilder }`.
+- `getAll(options?)`: Query index. Options: `{ limit, scanIndexForward, exclusiveStartKey, skValue, filterBuilder, FilterExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
 - `getLastEvaluatedKey()`: Returns the pagination token from the last `getAll()`.
 
 ### Item (returned by Partition.get or draft)

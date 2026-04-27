@@ -22,8 +22,8 @@ describe("Raw Condition Expressions", () => {
 
     const user = db.User("john");
     await user.create("INFO", { name: "John" }, [], {
-      conditionExpression: "attribute_not_exists(#pk)",
-      expressionAttributeNames: { "#pk": "PK" },
+      ConditionExpression: "attribute_not_exists(#pk)",
+      ExpressionAttributeNames: { "#pk": "PK" },
     });
 
     expect(mockSend).toHaveBeenCalledWith(
@@ -44,9 +44,9 @@ describe("Raw Condition Expressions", () => {
 
     const user = db.User("john");
     await user.update("INFO", { name: "John Doe" }, [], {
-      conditionExpression: "#name = :oldName",
-      expressionAttributeNames: { "#name": "name" },
-      expressionAttributeValues: { ":oldName": "John" },
+      ConditionExpression: "#name = :oldName",
+      ExpressionAttributeNames: { "#name": "name" },
+      ExpressionAttributeValues: { ":oldName": "John" },
     });
 
     expect(mockSend).toHaveBeenLastCalledWith(
@@ -89,8 +89,8 @@ describe("Raw Condition Expressions", () => {
 
     const user = db.User("john");
     await user.delete("INFO", {
-      conditionExpression: "attribute_exists(#sk)",
-      expressionAttributeNames: { "#sk": "SK" },
+      ConditionExpression: "attribute_exists(#sk)",
+      ExpressionAttributeNames: { "#sk": "SK" },
     });
 
     expect(mockSend).toHaveBeenCalledWith(
