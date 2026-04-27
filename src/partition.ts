@@ -26,19 +26,31 @@ export class Item {
     const self = this;
     return new Proxy(this, {
       get(target, prop, receiver) {
-        if (prop === "save") {
+        if (prop === "getData") {
           return () => {
-            const dataToSave: any = {};
+            const data: any = {};
             for (const key in target) {
               if (
                 Object.prototype.hasOwnProperty.call(target, key) &&
-                !["_indices", "_partition", "_skValue", "_toBeDeleted", "_filterBuilder", "_conditionBuilder"].includes(key) &&
+                ![
+                  "_indices",
+                  "_partition",
+                  "_skValue",
+                  "_toBeDeleted",
+                  "_filterBuilder",
+                  "_conditionBuilder",
+                ].includes(key) &&
                 typeof target[key] !== "function"
               ) {
-                dataToSave[key] = target[key];
+                data[key] = target[key];
               }
             }
-            return partition.update(skValue, dataToSave, self._indices, {
+            return data;
+          };
+        }
+        if (prop === "save") {
+          return () => {
+            return partition.update(skValue, receiver.getData(), self._indices, {
               conditionBuilder: self._conditionBuilder,
             });
           };
