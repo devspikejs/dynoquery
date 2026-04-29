@@ -32,7 +32,7 @@ describe("Transaction Operations", () => {
     it("should process items and send TransactWriteCommand", async () => {
       const user1 = db.User("john", "METADATA");
       user1.name = "John Doe";
-      
+
       const user2 = db.User("jane", "METADATA");
       user2.name = "Jane Doe";
 
@@ -104,7 +104,6 @@ describe("Transaction Operations", () => {
                   },
                   ConditionExpression: "attribute_exists(#n0)",
                   ExpressionAttributeNames: { "#n0": "version" },
-                  ExpressionAttributeValues: {},
                 },
               },
             ],
@@ -116,11 +115,11 @@ describe("Transaction Operations", () => {
     it("should handle condition expressions in delete in transactWrite", async () => {
         const user = db.User("john").draftDelete("METADATA");
         user.setCondition(attr("status").equals("ACTIVE"));
-  
+
         mockSend.mockResolvedValue({});
-  
+
         await db.transactWrite([user]);
-  
+
         expect(mockSend).toHaveBeenCalledWith(
           expect.objectContaining({
             input: {
@@ -177,15 +176,15 @@ describe("Transaction Operations", () => {
 
     it("should return null for missing items in transactRead", async () => {
         const userDraft = db.User("missing", "METADATA");
-  
+
         mockSend.mockResolvedValue({
           Responses: [
             {},
           ],
         });
-  
+
         const results = await db.transactRead([userDraft]);
-  
+
         expect(results).toHaveLength(1);
         expect(results[0]).toBeNull();
       });

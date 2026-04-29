@@ -206,13 +206,21 @@ class Partition {
             if (options === null || options === void 0 ? void 0 : options.conditionBuilder) {
                 const { expression, attributeNames, attributeValues } = options.conditionBuilder.build();
                 createParams.ConditionExpression = expression;
-                createParams.ExpressionAttributeNames = Object.assign(Object.assign({}, createParams.ExpressionAttributeNames), attributeNames);
-                createParams.ExpressionAttributeValues = Object.assign(Object.assign({}, createParams.ExpressionAttributeValues), attributeValues);
+                if (Object.keys(attributeNames).length > 0) {
+                    createParams.ExpressionAttributeNames = Object.assign(Object.assign({}, createParams.ExpressionAttributeNames), attributeNames);
+                }
+                if (Object.keys(attributeValues).length > 0) {
+                    createParams.ExpressionAttributeValues = Object.assign(Object.assign({}, createParams.ExpressionAttributeValues), attributeValues);
+                }
             }
             if (options === null || options === void 0 ? void 0 : options.ConditionExpression) {
                 createParams.ConditionExpression = options.ConditionExpression;
-                createParams.ExpressionAttributeNames = Object.assign(Object.assign({}, createParams.ExpressionAttributeNames), options.ExpressionAttributeNames);
-                createParams.ExpressionAttributeValues = Object.assign(Object.assign({}, createParams.ExpressionAttributeValues), options.ExpressionAttributeValues);
+                if (options.ExpressionAttributeNames && Object.keys(options.ExpressionAttributeNames).length > 0) {
+                    createParams.ExpressionAttributeNames = Object.assign(Object.assign({}, createParams.ExpressionAttributeNames), options.ExpressionAttributeNames);
+                }
+                if (options.ExpressionAttributeValues && Object.keys(options.ExpressionAttributeValues).length > 0) {
+                    createParams.ExpressionAttributeValues = Object.assign(Object.assign({}, createParams.ExpressionAttributeValues), options.ExpressionAttributeValues);
+                }
             }
             yield this.db.create(createParams);
             this.cache[skValue] = item;
@@ -249,8 +257,8 @@ class Partition {
      */
     update(skValue, data, indices, options) {
         return __awaiter(this, void 0, void 0, function* () {
-            const current = (yield this._getRaw(skValue)) || {};
-            const updated = Object.assign(Object.assign({}, current), data);
+            const current = yield this._getRaw(skValue);
+            const updated = Object.assign(Object.assign({}, (current || {})), data);
             return yield this.create(skValue, updated, indices, options);
         });
     }
@@ -269,13 +277,21 @@ class Partition {
             if (options === null || options === void 0 ? void 0 : options.conditionBuilder) {
                 const { expression, attributeNames, attributeValues } = options.conditionBuilder.build();
                 deleteParams.ConditionExpression = expression;
-                deleteParams.ExpressionAttributeNames = Object.assign(Object.assign({}, deleteParams.ExpressionAttributeNames), attributeNames);
-                deleteParams.ExpressionAttributeValues = Object.assign(Object.assign({}, deleteParams.ExpressionAttributeValues), attributeValues);
+                if (Object.keys(attributeNames).length > 0) {
+                    deleteParams.ExpressionAttributeNames = Object.assign(Object.assign({}, deleteParams.ExpressionAttributeNames), attributeNames);
+                }
+                if (Object.keys(attributeValues).length > 0) {
+                    deleteParams.ExpressionAttributeValues = Object.assign(Object.assign({}, deleteParams.ExpressionAttributeValues), attributeValues);
+                }
             }
             if (options === null || options === void 0 ? void 0 : options.ConditionExpression) {
                 deleteParams.ConditionExpression = options.ConditionExpression;
-                deleteParams.ExpressionAttributeNames = Object.assign(Object.assign({}, deleteParams.ExpressionAttributeNames), options.ExpressionAttributeNames);
-                deleteParams.ExpressionAttributeValues = Object.assign(Object.assign({}, deleteParams.ExpressionAttributeValues), options.ExpressionAttributeValues);
+                if (options.ExpressionAttributeNames && Object.keys(options.ExpressionAttributeNames).length > 0) {
+                    deleteParams.ExpressionAttributeNames = Object.assign(Object.assign({}, deleteParams.ExpressionAttributeNames), options.ExpressionAttributeNames);
+                }
+                if (options.ExpressionAttributeValues && Object.keys(options.ExpressionAttributeValues).length > 0) {
+                    deleteParams.ExpressionAttributeValues = Object.assign(Object.assign({}, deleteParams.ExpressionAttributeValues), options.ExpressionAttributeValues);
+                }
             }
             yield this.db.delete(deleteParams);
             delete this.cache[skValue];

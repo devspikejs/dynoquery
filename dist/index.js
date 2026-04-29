@@ -292,8 +292,12 @@ class DynoQuery {
                         if (conditionBuilder) {
                             const { expression, attributeNames, attributeValues } = conditionBuilder.build();
                             deleteItem.ConditionExpression = expression;
-                            deleteItem.ExpressionAttributeNames = attributeNames;
-                            deleteItem.ExpressionAttributeValues = attributeValues;
+                            if (Object.keys(attributeNames).length > 0) {
+                                deleteItem.ExpressionAttributeNames = attributeNames;
+                            }
+                            if (Object.keys(attributeValues).length > 0) {
+                                deleteItem.ExpressionAttributeValues = attributeValues;
+                            }
                         }
                         return {
                             Delete: deleteItem,
@@ -311,8 +315,12 @@ class DynoQuery {
                         if (conditionBuilder) {
                             const { expression, attributeNames, attributeValues } = conditionBuilder.build();
                             putItem.ConditionExpression = expression;
-                            putItem.ExpressionAttributeNames = attributeNames;
-                            putItem.ExpressionAttributeValues = attributeValues;
+                            if (Object.keys(attributeNames).length > 0) {
+                                putItem.ExpressionAttributeNames = attributeNames;
+                            }
+                            if (Object.keys(attributeValues).length > 0) {
+                                putItem.ExpressionAttributeValues = attributeValues;
+                            }
                         }
                         return {
                             Put: putItem,
