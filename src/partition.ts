@@ -260,26 +260,34 @@ export class Partition {
     if (options?.conditionBuilder) {
       const { expression, attributeNames, attributeValues } = options.conditionBuilder.build();
       createParams.ConditionExpression = expression;
-      createParams.ExpressionAttributeNames = {
-        ...createParams.ExpressionAttributeNames,
-        ...attributeNames,
-      };
-      createParams.ExpressionAttributeValues = {
-        ...createParams.ExpressionAttributeValues,
-        ...attributeValues,
-      };
+      if (Object.keys(attributeNames).length > 0) {
+        createParams.ExpressionAttributeNames = {
+          ...createParams.ExpressionAttributeNames,
+          ...attributeNames,
+        };
+      }
+      if (Object.keys(attributeValues).length > 0) {
+        createParams.ExpressionAttributeValues = {
+          ...createParams.ExpressionAttributeValues,
+          ...attributeValues,
+        };
+      }
     }
 
     if (options?.ConditionExpression) {
       createParams.ConditionExpression = options.ConditionExpression;
-      createParams.ExpressionAttributeNames = {
-        ...createParams.ExpressionAttributeNames,
-        ...options.ExpressionAttributeNames,
-      };
-      createParams.ExpressionAttributeValues = {
-        ...createParams.ExpressionAttributeValues,
-        ...options.ExpressionAttributeValues,
-      };
+      if (options.ExpressionAttributeNames && Object.keys(options.ExpressionAttributeNames).length > 0) {
+        createParams.ExpressionAttributeNames = {
+          ...createParams.ExpressionAttributeNames,
+          ...options.ExpressionAttributeNames,
+        };
+      }
+      if (options.ExpressionAttributeValues && Object.keys(options.ExpressionAttributeValues).length > 0) {
+        createParams.ExpressionAttributeValues = {
+          ...createParams.ExpressionAttributeValues,
+          ...options.ExpressionAttributeValues,
+        };
+      }
     }
 
     await this.db.create(createParams);
@@ -328,8 +336,8 @@ export class Partition {
       ExpressionAttributeValues?: Record<string, any>;
     }
   ): Promise<T> {
-    const current = await this._getRaw(skValue) || {};
-    const updated = { ...current, ...data } as T;
+    const current = await this._getRaw(skValue);
+    const updated = { ...(current || {}), ...data } as T;
     return await this.create(skValue, updated, indices, options);
   }
 
@@ -356,26 +364,34 @@ export class Partition {
     if (options?.conditionBuilder) {
       const { expression, attributeNames, attributeValues } = options.conditionBuilder.build();
       deleteParams.ConditionExpression = expression;
-      deleteParams.ExpressionAttributeNames = {
-        ...deleteParams.ExpressionAttributeNames,
-        ...attributeNames,
-      };
-      deleteParams.ExpressionAttributeValues = {
-        ...deleteParams.ExpressionAttributeValues,
-        ...attributeValues,
-      };
+      if (Object.keys(attributeNames).length > 0) {
+        deleteParams.ExpressionAttributeNames = {
+          ...deleteParams.ExpressionAttributeNames,
+          ...attributeNames,
+        };
+      }
+      if (Object.keys(attributeValues).length > 0) {
+        deleteParams.ExpressionAttributeValues = {
+          ...deleteParams.ExpressionAttributeValues,
+          ...attributeValues,
+        };
+      }
     }
 
     if (options?.ConditionExpression) {
       deleteParams.ConditionExpression = options.ConditionExpression;
-      deleteParams.ExpressionAttributeNames = {
-        ...deleteParams.ExpressionAttributeNames,
-        ...options.ExpressionAttributeNames,
-      };
-      deleteParams.ExpressionAttributeValues = {
-        ...deleteParams.ExpressionAttributeValues,
-        ...options.ExpressionAttributeValues,
-      };
+      if (options.ExpressionAttributeNames && Object.keys(options.ExpressionAttributeNames).length > 0) {
+        deleteParams.ExpressionAttributeNames = {
+          ...deleteParams.ExpressionAttributeNames,
+          ...options.ExpressionAttributeNames,
+        };
+      }
+      if (options.ExpressionAttributeValues && Object.keys(options.ExpressionAttributeValues).length > 0) {
+        deleteParams.ExpressionAttributeValues = {
+          ...deleteParams.ExpressionAttributeValues,
+          ...options.ExpressionAttributeValues,
+        };
+      }
     }
 
     await this.db.delete(deleteParams);
