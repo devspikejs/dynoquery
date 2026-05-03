@@ -227,6 +227,31 @@ if (items[0]) {
 }
 ```
 
+### 6. Time To Live (TTL)
+
+DynamoDB TTL allows you to automatically delete items after a certain timestamp. To use it in DynoQuery, configure `ttlAttributeName` when initializing the client.
+
+> **Note:** DynoQuery does not enable TTL in DynamoDB. It only sets the values using the `ttl()` function. You must manually enable TTL for your table in the AWS Console or via CLI/CloudFormation first.
+
+```typescript
+const db = new DynoQuery({
+  region: 'us-east-1',
+  tableName: 'MyTable',
+  ttlAttributeName: 'expireAt' // The attribute name which is set in DynamoDB to be used for TTL
+});
+
+async function ttlExample() {
+  const session = db.User('john@example.com').draft('SESSION');
+  
+  // Set TTL to 1 hour from now (timestamp in seconds)
+  const ttl = Math.floor(Date.now() / 1000) + 3600;
+  session.ttl(ttl);
+  
+  session.data = 'some session data';
+  await session.save();
+}
+```
+
 ## Optional Configuration Parameters
 
 | Parameter | Type | Default | Description |
@@ -234,6 +259,7 @@ if (items[0]) {
 | `pkName` | `string` | `'PK'` | Custom attribute name for Partition Key. |
 | `skName` | `string` | `'SK'` | Custom attribute name for Sort Key. |
 | `pkPrefix` | `string` | `''` | Global prefix for all partitions (useful for multitenancy, e.g., `TENANT#A#`). |
+| `ttlAttributeName` | `string` | - | Optional attribute name for DynamoDB TTL. |
 | `endpoint` | `string` | - | Optional endpoint for local development (e.g., `http://localhost:8000`). |
 | `credentials` | `object` | - | Custom AWS credentials (`{ accessKeyId, secretAccessKey, sessionToken? }`). |
 
@@ -354,6 +380,7 @@ await johnMeta.save();
 
 ### Item (returned by Partition.get or draft)
 - `save()`: Persists the current state of the item. Uses indices attached via `setIndex()` and internal `conditionBuilder`.
+- `ttl(timestamp)`: Sets the TTL attribute value. Only works if `ttlAttributeName` is configured in `DynoQueryConfig`.
 - `getData()`: Returns a clean data object containing only the database attributes (filters out internal state and methods).
 - `setIndex(indices)`: Attaches one or more `IndexQuery` objects to the item.
 - `setFilter(builder)`: Sets a filter expression builder for the item.
