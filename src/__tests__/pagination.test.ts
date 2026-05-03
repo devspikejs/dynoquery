@@ -45,7 +45,7 @@ describe("Pagination", () => {
     });
 
     const index = (db as any).findByCategory("A");
-    const result = await index.getAll({ limit: 1 });
+    const result = await index.getAll({ Limit: 1 });
 
     expect(result.length).toBe(1);
     expect(index.getLastEvaluatedKey()).toBeDefined();
@@ -57,7 +57,7 @@ describe("Pagination", () => {
     const startKey = { PK: "USER#1", SK: "PROFILE", GSI1PK: "CAT#A", GSI1SK: "1" };
 
     const index = (db as any).findByCategory("A");
-    await index.getAll({ exclusiveStartKey: startKey });
+    await index.getAll({ ExclusiveStartKey: startKey });
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -78,7 +78,7 @@ describe("Pagination", () => {
     });
 
     const user = (db as any).User("1");
-    const result = await user.getAll({ limit: 1 });
+    const result = await user.getAll({ Limit: 1 });
 
     expect(result.length).toBe(1);
     expect(user.getLastEvaluatedKey()).toEqual(mockLastKey);
@@ -91,7 +91,7 @@ describe("Pagination", () => {
     const startKey = { PK: "USER#1", SK: "PROFILE" };
 
     const user = (db as any).User("1");
-    await user.getAll({ exclusiveStartKey: startKey });
+    await user.getAll({ ExclusiveStartKey: startKey });
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
