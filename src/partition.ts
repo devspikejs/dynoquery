@@ -115,7 +115,7 @@ export class Partition {
   protected skName: string;
   protected cache: Record<string, any> = {};
   protected isLoaded: boolean = false;
-  protected lastEvaluatedKey: any = null;
+  protected LastEvaluatedKey: any = null;
   protected ttlAttributeName?: string;
 
   constructor(db: DynoQuery, config: PartitionConfig, id?: string) {
@@ -168,8 +168,8 @@ export class Partition {
    * Returns the data and caches it.
    */
   async getAll<T = any>(options?: {
-    limit?: number;
-    exclusiveStartKey?: any;
+    Limit?: number;
+    ExclusiveStartKey?: any;
     filterBuilder?: ExpressionBuilder;
     FilterExpression?: string;
     ExpressionAttributeNames?: Record<string, string>;
@@ -198,8 +198,8 @@ export class Partition {
       FilterExpression: filterExpression,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,
-      Limit: options?.limit,
-      ExclusiveStartKey: options?.exclusiveStartKey,
+      Limit: options?.Limit,
+      ExclusiveStartKey: options?.ExclusiveStartKey,
     });
 
     const items = (response.Items || []) as T[];
@@ -209,11 +209,11 @@ export class Partition {
       }
     });
 
-    if (!options?.exclusiveStartKey && !response.LastEvaluatedKey) {
+    if (!options?.ExclusiveStartKey && !response.LastEvaluatedKey) {
       this.isLoaded = true;
     }
 
-    this.lastEvaluatedKey = response.LastEvaluatedKey || null;
+    this.LastEvaluatedKey = response.LastEvaluatedKey || null;
 
     return items.map((item: any) => new Item(this, item[this.skName], item) as any);
   }
@@ -432,7 +432,7 @@ export class Partition {
   }
 
   getLastEvaluatedKey(): any {
-    return this.lastEvaluatedKey;
+    return this.LastEvaluatedKey;
   }
 
   /**

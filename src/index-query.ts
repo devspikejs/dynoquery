@@ -20,7 +20,7 @@ export class IndexQuery {
   protected skName: string;
   protected pkValue: string;
   protected skValue?: string;
-  protected lastEvaluatedKey: any = null;
+  protected LastEvaluatedKey: any = null;
 
   constructor(db: DynoQuery, config: IndexQueryConfig) {
     this.db = db;
@@ -46,9 +46,9 @@ export class IndexQuery {
   }
 
   async getAll<T = any>(options?: {
-    limit?: number;
-    scanIndexForward?: boolean;
-    exclusiveStartKey?: any;
+    Limit?: number;
+    ScanIndexForward?: boolean;
+    ExclusiveStartKey?: any;
     skValue?: string;
     filterBuilder?: ExpressionBuilder;
     FilterExpression?: string;
@@ -89,21 +89,21 @@ export class IndexQuery {
       FilterExpression: filterExpression,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,
-      Limit: options?.limit,
-      ScanIndexForward: options?.scanIndexForward,
-      ExclusiveStartKey: options?.exclusiveStartKey,
+      Limit: options?.Limit,
+      ScanIndexForward: options?.ScanIndexForward,
+      ExclusiveStartKey: options?.ExclusiveStartKey,
     });
 
     const items = (response.Items || []) as any[];
     const mappedItems = items.map(item => this.db.mapItemToModelItem(item));
 
-    this.lastEvaluatedKey = response.LastEvaluatedKey || null;
+    this.LastEvaluatedKey = response.LastEvaluatedKey || null;
 
     return mappedItems as T[];
   }
 
   async get<T = any>(skValue?: string): Promise<T | null> {
-    const items = await this.getAll<T>({ limit: 1, skValue });
+    const items = await this.getAll<T>({ Limit: 1, skValue });
     return items.length > 0 ? items[0] : null;
   }
 
@@ -124,7 +124,7 @@ export class IndexQuery {
   }
 
   getLastEvaluatedKey(): any {
-    return this.lastEvaluatedKey;
+    return this.LastEvaluatedKey;
   }
 
 }

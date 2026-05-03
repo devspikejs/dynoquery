@@ -288,12 +288,12 @@ Both `Partition.getAll()` and `IndexQuery.getAll()` support pagination.
 
 ```typescript
 const index = db.findByCategory('ELECTRONICS');
-const items = await index.getAll({ limit: 10 });
+const items = await index.getAll({ Limit: 10 });
 
 const token = index.getLastEvaluatedKey();
 if (token) {
   // Fetch next page
-  const nextItems = await index.getAll({ limit: 10, exclusiveStartKey: token });
+  const nextItems = await index.getAll({ Limit: 10, ExclusiveStartKey: token });
 }
 ```
 
@@ -364,7 +364,7 @@ await johnMeta.save();
 
 ### Partition
 - `get(skValue)`: Fetches data for a specific Sort Key value (returns a Promise).
-- `getAll(options?)`: Fetches items in the partition. Options: `{ limit, exclusiveStartKey, filterBuilder, FilterExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
+- `getAll(options?)`: Fetches items in the partition. Options: `{ Limit, ExclusiveStartKey, filterBuilder, FilterExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
 - `create(skValue, data, indices?, options?)`: Creates an item. `options`: `{ conditionBuilder, ConditionExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
 - `update(skValue, data, indices?, options?)`: Partial update of an item. `options`: `{ conditionBuilder, ConditionExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
 - `delete(skValue, options?)`: Deletes an item. `options`: `{ conditionBuilder, ConditionExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
@@ -375,7 +375,7 @@ await johnMeta.save();
 
 ### IndexQuery
 - `get(skValue?)`: Get a single item from the index.
-- `getAll(options?)`: Query index. Options: `{ limit, scanIndexForward, exclusiveStartKey, skValue, filterBuilder, FilterExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
+- `getAll(options?)`: Query index. Options: `{ Limit, ScanIndexForward, ExclusiveStartKey, skValue, filterBuilder, FilterExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
 - `getLastEvaluatedKey()`: Returns the pagination token from the last `getAll()`.
 
 ### Item (returned by Partition.get or draft)

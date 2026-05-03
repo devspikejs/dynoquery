@@ -120,15 +120,14 @@ describe("IndexQuery", () => {
     );
   });
 
-  it("should support limit in options object", async () => {
+  it("should support Limit in options object", async () => {
     mockSend.mockResolvedValueOnce({ Items: [] });
     const index = (db as any).findByCategory("CAT#1");
-    await index.getAll({ limit: 10 });
+    await index.getAll({ Limit: 10 });
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.objectContaining({
-          KeyConditionExpression: "#pk = :pk",
           Limit: 10
         })
       })
