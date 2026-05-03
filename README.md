@@ -66,7 +66,7 @@ async function userExample() {
 
 #### Second-Level Objects (Single-Row Operations)
 
-For a more flexible way to work with individual rows, you can use `draft()` and `get()` to obtain an `Item` object, then call `create()`, `update()`, or `save()` on it directly. You can also use a shorthand by passing a second argument to your model function (as shown in the examples below).
+For a more flexible way to work with individual rows, you can use `draft()` and `get()` to obtain an `Item` object, then call `save()` on it directly. You can also use a shorthand by passing a second argument to your model function (as shown in the examples below).
 
 ```typescript
 const john = db.User('john@example.com');
@@ -78,8 +78,8 @@ johnMeta.email = 'johndoe@johnmail.com';
 await johnMeta.save();
 
 // 2. Create with properties in arguments
-const johnStat = john.draft('STAT');
-await johnStat.create({ views: 100 });
+const johnStat = john.draft('STAT', { views: 100 });
+await johnStat.save();
 
 // 3. Get and update an existing row
 const johnBio = await john.get('BIO');
@@ -87,8 +87,7 @@ johnBio.birthYear = 1986;
 await johnBio.save();
 
 // 4. Partial update without fetching
-const johnFriend1 = john.draft('FRIEND#1');
-await johnFriend1.update({ Name: 'Alice', rank: 1 });
+await john.update('FRIEND#1', { Name: 'Alice', rank: 1 });
 
 // 5. Set properties during initialization
 const johnPref = john.draft('PREF', { theme: 'dark' });
@@ -96,7 +95,8 @@ await johnPref.save();
 
 // 6. Shorthand access (returns an Item object directly)
 const johnMeta = db.User('john@example.com', 'METADATA');
-await johnMeta.update({ name: 'John Doe' });
+johnMeta.name = 'John Doe';
+await johnMeta.save();
 ```
 
 ### 2. Global Secondary Indexes (findBy)
@@ -137,7 +137,7 @@ async function indexExample() {
 
 ### 3. Creating Items with GSI Support
 
-You can pass index queries directly to `create()` or `update()` to automatically populate GSI attributes. This works on both the Partition level and the Item level.
+You can pass index queries directly to `create()` or `update()` to automatically populate GSI attributes. This works on the Partition level.
 
 #### Using Partition.create() and Partition.update()
 ```typescript
@@ -153,23 +153,8 @@ await db.Product('p123').create('INFO', {
 await db.Product('p123').update('INFO', { price: 45 }, [electronics]);
 ```
 
-#### Using Item.create() and Item.update()
-```typescript
-const electronics = db.findByCategory('ELECTRONICS', 'RANK#1');
-const mouse = db.Product('p123', 'INFO');
-
-// Pass data and indices directly to create()
-await mouse.create({ 
-  name: 'Gaming Mouse', 
-  price: 50 
-}, [electronics]);
-
-// Or use update() directly on the item for partial updates
-await mouse.update({ price: 40 }, [electronics]);
-```
-
 #### Using setIndex() for persistence
-You can also use `setIndex()` to attach indices to an item so they are used automatically whenever you call `save()`.
+You can also use `setIndex()` to attach indices to an item so they are used automatically whenever you call `save()`. This is useful when you have an Item object (e.g., from `draft()` or `get()`).
 
 ```typescript
 const electronics = db.findByCategory('ELECTRONICS', 'RANK#1');
@@ -368,8 +353,6 @@ await johnMeta.save();
 - `getLastEvaluatedKey()`: Returns the pagination token from the last `getAll()`.
 
 ### Item (returned by Partition.get or draft)
-- `create(data?, indices?)`: Persists the item as a new record with the provided data. Supports GSI indices and internal `conditionBuilder`.
-- `update(data, indices?)`: Partial update of the item. Supports GSI indices and internal `conditionBuilder`.
 - `save()`: Persists the current state of the item. Uses indices attached via `setIndex()` and internal `conditionBuilder`.
 - `getData()`: Returns a clean data object containing only the database attributes (filters out internal state and methods).
 - `setIndex(indices)`: Attaches one or more `IndexQuery` objects to the item.

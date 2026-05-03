@@ -22,12 +22,11 @@ describe("Item.create", () => {
     db = new DynoQuery({ region: "us-east-1", tableName: "AppTable" });
   });
 
-  it("should allow creating an item using item.create(data)", async () => {
+  it("should allow creating an item using partition.create(sk, data)", async () => {
     const john = new Partition(db, { pk: "USER#john@example.com" });
-    const johnMeta: any = john.draft('METADATA');
 
     mockSend.mockResolvedValue({});
-    await johnMeta.create({ name: 'John Doe', email: 'johndoe@johnmail.com' });
+    await john.create('METADATA', { name: 'John Doe', email: 'johndoe@johnmail.com' });
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -43,26 +42,6 @@ describe("Item.create", () => {
     );
   });
 
-  it("should NOT include properties set on the item when using item.create(data)", async () => {
-    const john = new Partition(db, { pk: "USER#john@example.com" });
-    const johnMeta: any = john.draft('METADATA');
-    johnMeta.temporaryProperty = 'should not be saved';
-
-    mockSend.mockResolvedValue({});
-    await johnMeta.create({ name: 'John Doe' });
-
-    expect(mockSend).toHaveBeenCalledWith(
-      expect.objectContaining({
-        input: expect.objectContaining({
-          Item: {
-            PK: "USER#john@example.com",
-            SK: "METADATA",
-            name: 'John Doe'
-          }
-        })
-      })
-    );
-  });
 
   it("should include properties set on the item when using item.save()", async () => {
     const john = new Partition(db, { pk: "USER#john@example.com" });
@@ -85,7 +64,7 @@ describe("Item.create", () => {
     );
   });
 
-  it("should allow creating an item with indices using item.create(data, indices)", async () => {
+  it("should allow creating an item with indices using partition.create(sk, data, indices)", async () => {
     const dbWithGSIs = new DynoQuery({
       region: 'us-east-1',
       tableName: 'AppTable',
@@ -95,12 +74,11 @@ describe("Item.create", () => {
     });
 
     const john = new Partition(dbWithGSIs, { pk: "USER#john@example.com" });
-    const johnMeta: any = john.draft('METADATA');
 
     const electronics = (dbWithGSIs as any).findByCategory('ELECTRONICS', 'RANK#1');
 
     mockSend.mockResolvedValue({});
-    await johnMeta.create({ name: 'John Doe' }, [electronics]);
+    await john.create('METADATA', { name: 'John Doe' }, [electronics]);
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({

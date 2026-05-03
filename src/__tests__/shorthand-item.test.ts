@@ -36,11 +36,12 @@ describe("Shorthand Item Access", () => {
     // Shorthand access
     const mouseInfo = db.Product("p123", "INFO");
     
-    // It should be an Item object (proxy) with update() method
-    expect(typeof mouseInfo.update).toBe("function");
+    // It should be an Item object (proxy) with save() method, but NO update() or create()
+    expect(mouseInfo.update).toBeUndefined();
+    expect(mouseInfo.create).toBeUndefined();
     expect(typeof mouseInfo.save).toBe("function");
 
-    await mouseInfo.update({ price: 40 });
+    await mouseInfo.save();
 
     expect(mockSend).toHaveBeenCalled();
     const createCall = mockSend.mock.calls.find(call => {
@@ -53,7 +54,6 @@ describe("Shorthand Item Access", () => {
       Item: {
         PK: "PRODUCT#p123",
         SK: "INFO",
-        price: 40
       }
     });
   });
