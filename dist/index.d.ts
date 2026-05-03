@@ -10,6 +10,7 @@ export interface DynoQueryConfig {
     region?: string;
     endpoint?: string;
     pkPrefix?: string;
+    ttlAttributeName?: string;
     credentials?: {
         accessKeyId: string;
         secretAccessKey: string;
@@ -32,6 +33,7 @@ export declare class DynoQuery {
     private globalPkPrefix;
     private pkName;
     private skName;
+    private ttlAttributeName?;
     private registeredModels;
     [key: string]: any;
     constructor(config?: DynoQueryConfig);
@@ -83,6 +85,7 @@ export declare class DynoQuery {
     getPkPrefix(): string;
     getPkName(): string;
     getSkName(): string;
+    getTtlAttributeName(): string | undefined;
     getRegisteredModels(): Record<string, {
         pkPrefix: string;
     }>;

@@ -17,12 +17,12 @@ export declare class IndexQuery {
     protected skName: string;
     protected pkValue: string;
     protected skValue?: string;
-    protected lastEvaluatedKey: any;
+    protected LastEvaluatedKey: any;
     constructor(db: DynoQuery, config: IndexQueryConfig);
     getAll<T = any>(options?: {
-        limit?: number;
-        scanIndexForward?: boolean;
-        exclusiveStartKey?: any;
+        Limit?: number;
+        ScanIndexForward?: boolean;
+        ExclusiveStartKey?: any;
         skValue?: string;
         filterBuilder?: ExpressionBuilder;
         FilterExpression?: string;

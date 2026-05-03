@@ -47,22 +47,6 @@ class Item {
                         });
                     };
                 }
-                if (prop === "create") {
-                    return (data, indices) => {
-                        const dataToSave = data || {};
-                        const finalIndices = indices || self._indices;
-                        return partition.create(skValue, dataToSave, finalIndices, {
-                            conditionBuilder: self._conditionBuilder,
-                        });
-                    };
-                }
-                if (prop === "update") {
-                    return (data, indices) => {
-                        return partition.update(skValue, data, indices, {
-                            conditionBuilder: self._conditionBuilder,
-                        });
-                    };
-                }
                 if (prop === "setFilter") {
                     return (builder) => {
                         self._filterBuilder = builder;
@@ -92,6 +76,15 @@ class Item {
                         return receiver;
                     };
                 }
+                if (prop === "ttl") {
+                    return (timestamp) => {
+                        const ttlAttr = partition.getTtlAttributeName();
+                        if (ttlAttr) {
+                            self[ttlAttr] = timestamp;
+                        }
+                        return receiver;
+                    };
+                }
                 if (prop === "getPartition") {
                     return () => partition;
                 }
@@ -111,11 +104,12 @@ class Partition {
     constructor(db, config, id) {
         this.cache = {};
         this.isLoaded = false;
-        this.lastEvaluatedKey = null;
+        this.LastEvaluatedKey = null;
         this.db = db;
         this.tableName = config.tableName || db.getTableName();
         this.pkName = db.getPkName();
         this.skName = db.getSkName();
+        this.ttlAttributeName = db.getTtlAttributeName();
         if (config.pk) {
             this.pkValue = config.pk;
         }
@@ -169,8 +163,8 @@ class Partition {
                 FilterExpression: filterExpression,
                 ExpressionAttributeNames: expressionAttributeNames,
                 ExpressionAttributeValues: expressionAttributeValues,
-                Limit: options === null || options === void 0 ? void 0 : options.limit,
-                ExclusiveStartKey: options === null || options === void 0 ? void 0 : options.exclusiveStartKey,
+                Limit: options === null || options === void 0 ? void 0 : options.Limit,
+                ExclusiveStartKey: options === null || options === void 0 ? void 0 : options.ExclusiveStartKey,
             });
             const items = (response.Items || []);
             items.forEach((item) => {
@@ -178,10 +172,10 @@ class Partition {
                     this.cache[item[this.skName]] = item;
                 }
             });
-            if (!(options === null || options === void 0 ? void 0 : options.exclusiveStartKey) && !response.LastEvaluatedKey) {
+            if (!(options === null || options === void 0 ? void 0 : options.ExclusiveStartKey) && !response.LastEvaluatedKey) {
                 this.isLoaded = true;
             }
-            this.lastEvaluatedKey = response.LastEvaluatedKey || null;
+            this.LastEvaluatedKey = response.LastEvaluatedKey || null;
             return items.map((item) => new Item(this, item[this.skName], item));
         });
     }
@@ -327,8 +321,11 @@ class Partition {
     getPkValue() {
         return this.pkValue;
     }
+    getTtlAttributeName() {
+        return this.ttlAttributeName;
+    }
     getLastEvaluatedKey() {
-        return this.lastEvaluatedKey;
+        return this.LastEvaluatedKey;
     }
     /**
      * Delete all data in this partition.

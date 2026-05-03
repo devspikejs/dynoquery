@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.IndexQuery = void 0;
 class IndexQuery {
     constructor(db, config) {
-        this.lastEvaluatedKey = null;
+        this.LastEvaluatedKey = null;
         this.db = db;
         this.tableName = config.tableName || db.getTableName() || "";
         this.indexName = config.indexName;
@@ -55,19 +55,19 @@ class IndexQuery {
                 FilterExpression: filterExpression,
                 ExpressionAttributeNames: expressionAttributeNames,
                 ExpressionAttributeValues: expressionAttributeValues,
-                Limit: options === null || options === void 0 ? void 0 : options.limit,
-                ScanIndexForward: options === null || options === void 0 ? void 0 : options.scanIndexForward,
-                ExclusiveStartKey: options === null || options === void 0 ? void 0 : options.exclusiveStartKey,
+                Limit: options === null || options === void 0 ? void 0 : options.Limit,
+                ScanIndexForward: options === null || options === void 0 ? void 0 : options.ScanIndexForward,
+                ExclusiveStartKey: options === null || options === void 0 ? void 0 : options.ExclusiveStartKey,
             });
             const items = (response.Items || []);
             const mappedItems = items.map(item => this.db.mapItemToModelItem(item));
-            this.lastEvaluatedKey = response.LastEvaluatedKey || null;
+            this.LastEvaluatedKey = response.LastEvaluatedKey || null;
             return mappedItems;
         });
     }
     get(skValue) {
         return __awaiter(this, void 0, void 0, function* () {
-            const items = yield this.getAll({ limit: 1, skValue });
+            const items = yield this.getAll({ Limit: 1, skValue });
             return items.length > 0 ? items[0] : null;
         });
     }
@@ -84,7 +84,7 @@ class IndexQuery {
         return this.skValue;
     }
     getLastEvaluatedKey() {
-        return this.lastEvaluatedKey;
+        return this.LastEvaluatedKey;
     }
 }
 exports.IndexQuery = IndexQuery;

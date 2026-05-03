@@ -45,7 +45,7 @@ Object.defineProperty(exports, "attr", { enumerable: true, get: function () { re
 class DynoQuery {
     constructor(config = {}) {
         this.registeredModels = {};
-        const { tableName, pkName, skName, pkPrefix, models, findBy } = config, clientConfig = __rest(config, ["tableName", "pkName", "skName", "pkPrefix", "models", "findBy"]);
+        const { tableName, pkName, skName, pkPrefix, ttlAttributeName, models, findBy } = config, clientConfig = __rest(config, ["tableName", "pkName", "skName", "pkPrefix", "ttlAttributeName", "models", "findBy"]);
         this.client = new client_dynamodb_1.DynamoDBClient(clientConfig);
         this.docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(this.client, {
             marshallOptions: {
@@ -56,6 +56,7 @@ class DynoQuery {
         this.globalPkPrefix = pkPrefix || "";
         this.pkName = pkName || "PK";
         this.skName = skName || "SK";
+        this.ttlAttributeName = ttlAttributeName;
         if (models) {
             this.registeredModels = models;
             Object.entries(models).forEach(([name, def]) => {
@@ -422,6 +423,9 @@ class DynoQuery {
     }
     getSkName() {
         return this.skName;
+    }
+    getTtlAttributeName() {
+        return this.ttlAttributeName;
     }
     getRegisteredModels() {
         return this.registeredModels;

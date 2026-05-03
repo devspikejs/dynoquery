@@ -24,15 +24,16 @@ export declare class Partition {
     protected skName: string;
     protected cache: Record<string, any>;
     protected isLoaded: boolean;
-    protected lastEvaluatedKey: any;
+    protected LastEvaluatedKey: any;
+    protected ttlAttributeName?: string;
     constructor(db: DynoQuery, config: PartitionConfig, id?: string);
     /**
      * Fetches all items in the partition and caches them.
      * Returns the data and caches it.
      */
     getAll<T = any>(options?: {
-        limit?: number;
-        exclusiveStartKey?: any;
+        Limit?: number;
+        ExclusiveStartKey?: any;
         filterBuilder?: ExpressionBuilder;
         FilterExpression?: string;
         ExpressionAttributeNames?: Record<string, string>;
@@ -86,6 +87,7 @@ export declare class Partition {
     draftDelete<T = any>(skValue: string): T;
     getTableName(): string;
     getPkValue(): string;
+    getTtlAttributeName(): string | undefined;
     getLastEvaluatedKey(): any;
     /**
      * Delete all data in this partition.
