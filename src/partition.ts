@@ -83,6 +83,15 @@ export class Item {
             return receiver;
           };
         }
+        if (prop === "ttl") {
+          return (timestamp: number) => {
+            const ttlAttr = partition.getTtlAttributeName();
+            if (ttlAttr) {
+              self[ttlAttr] = timestamp;
+            }
+            return receiver;
+          };
+        }
         if (prop === "getPartition") {
           return () => partition;
         }
@@ -107,12 +116,14 @@ export class Partition {
   protected cache: Record<string, any> = {};
   protected isLoaded: boolean = false;
   protected lastEvaluatedKey: any = null;
+  protected ttlAttributeName?: string;
 
   constructor(db: DynoQuery, config: PartitionConfig, id?: string) {
     this.db = db;
     this.tableName = config.tableName || db.getTableName();
     this.pkName = db.getPkName();
     this.skName = db.getSkName();
+    this.ttlAttributeName = db.getTtlAttributeName();
 
     if (config.pk) {
       this.pkValue = config.pk;
@@ -414,6 +425,10 @@ export class Partition {
 
   getPkValue(): string {
     return this.pkValue;
+  }
+
+  getTtlAttributeName(): string | undefined {
+    return this.ttlAttributeName;
   }
 
   getLastEvaluatedKey(): any {

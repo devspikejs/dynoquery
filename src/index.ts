@@ -31,6 +31,7 @@ export interface DynoQueryConfig {
   region?: string;
   endpoint?: string;
   pkPrefix?: string;
+  ttlAttributeName?: string;
   credentials?: {
     accessKeyId: string;
     secretAccessKey: string;
@@ -47,6 +48,7 @@ export class DynoQuery {
   private globalPkPrefix: string;
   private pkName: string;
   private skName: string;
+  private ttlAttributeName?: string;
   private registeredModels: Record<string, { pkPrefix: string }> = {};
   [key: string]: any;
 
@@ -56,6 +58,7 @@ export class DynoQuery {
       pkName,
       skName,
       pkPrefix,
+      ttlAttributeName,
       models,
       findBy,
       ...clientConfig
@@ -71,6 +74,7 @@ export class DynoQuery {
     this.globalPkPrefix = pkPrefix || "";
     this.pkName = pkName || "PK";
     this.skName = skName || "SK";
+    this.ttlAttributeName = ttlAttributeName;
 
     if (models) {
       this.registeredModels = models;
@@ -473,6 +477,10 @@ export class DynoQuery {
 
   getSkName(): string {
     return this.skName;
+  }
+
+  getTtlAttributeName(): string | undefined {
+    return this.ttlAttributeName;
   }
 
   getRegisteredModels(): Record<string, { pkPrefix: string }> {
