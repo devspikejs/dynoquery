@@ -55,22 +55,6 @@ export class Item {
             });
           };
         }
-        if (prop === "create") {
-          return (data?: any, indices?: IndexQuery[]) => {
-            const dataToSave = data || {};
-            const finalIndices = indices || self._indices;
-            return partition.create(skValue, dataToSave, finalIndices, {
-              conditionBuilder: self._conditionBuilder,
-            });
-          };
-        }
-        if (prop === "update") {
-          return (data: any, indices?: IndexQuery[]) => {
-            return partition.update(skValue, data, indices, {
-              conditionBuilder: self._conditionBuilder,
-            });
-          };
-        }
         if (prop === "setFilter") {
           return (builder: ExpressionBuilder) => {
             self._filterBuilder = builder;

@@ -35,15 +35,15 @@ describe("Item Indices Support", () => {
     mockSend = mockDocClient.send;
   });
 
-  it("should support indices in item.update()", async () => {
+  it("should support indices in partition.update()", async () => {
     const electronics = (db as any).findByCategory("ELECTRONICS", "RANK#1");
-    const mouse = db.Product("p123").draft("INFO");
+    const product = db.Product("p123");
 
     // Mock get for update
     mockSend.mockResolvedValueOnce({ Item: { PK: "PROD#p123", SK: "INFO", name: "Old Name" } });
     mockSend.mockResolvedValueOnce({}); // for create/put
 
-    await mouse.update({ name: "Gaming Mouse" }, [electronics]);
+    await product.update("INFO", { name: "Gaming Mouse" }, [electronics]);
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
