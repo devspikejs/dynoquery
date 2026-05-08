@@ -1,6 +1,29 @@
 # DynoQuery
 
+[![npm version](https://img.shields.io/npm/v/dynoquery.svg)](https://www.npmjs.com/package/dynoquery)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A lightweight wrapper for Amazon DynamoDB using the AWS SDK v3, specifically designed for **Single-Table Design** patterns.
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Features](#features)
+- [Quick Start](#quick-start)
+  - [1. Working with Partitions (Models)](#1-working-with-partitions-models)
+  - [2. Global Secondary Indexes (findBy)](#2-global-secondary-indexes-findby)
+  - [3. Creating Items with GSI Support](#3-creating-items-with-gsi-support)
+  - [4. Batch Operations](#4-batch-operations)
+  - [5. Transaction Operations](#5-transaction-operations)
+  - [6. Time To Live (TTL)](#6-time-to-live-ttl)
+- [Configuration](#configuration)
+  - [DynoQuery Options](#dynoquery-options)
+  - [findBy Index Options](#findby-index-options)
+- [Advanced Usage](#advanced-usage)
+  - [Pagination](#pagination)
+  - [Expression Builder](#expression-builder)
+- [API Reference](#api-reference)
+- [License](#license)
 
 ## Installation
 
@@ -14,11 +37,12 @@ npm install dynoquery
 - Optimized for **Single-Table Design** (Partitions and GSIs)
 - Automatic result mapping to partition models
 - Built-in caching for partition instances
+- Batch and transaction support with automatic chunking
 - TypeScript support
 
-## Quick Start (Basic Usage)
+## Quick Start
 
-First, initialize the client with your table name.
+Initialize the client with your table name and define your models.
 
 ```typescript
 import { DynoQuery } from 'dynoquery';
@@ -31,77 +55,70 @@ const db = new DynoQuery({
 
 ### 1. Working with Partitions (Models)
 
-Define your models to handle different types of data within your single table.
+Define models to handle different entity types within your single table. Each model maps to a PK prefix (e.g. `USER#john@example.com`).
 
 ```typescript
 const db = new DynoQuery({
   region: 'us-east-1',
   tableName: 'MyTable',
   models: {
-    User: { pkPrefix: 'USER#' }, // Resulting PK: USER#<id>
-    Product: { pkPrefix: 'PROD#' }
+    User: { pkPrefix: 'USER#' },    // PK: USER#<id>
+    Product: { pkPrefix: 'PROD#' }  // PK: PROD#<id>
   }
 });
 
 async function userExample() {
-  const john = db.User('john@example.com');
-  
+  const john = db.User('john@example.com'); // PK: USER#john@example.com
+
   // Create an item (SK: PROFILE)
   await john.create('PROFILE', { name: 'John Doe', email: 'john@example.com' });
-  
+
   // Get an item (uses cache if already loaded)
   const profile = await john.get('PROFILE');
   console.log(profile.name); // 'John Doe'
 
-  // Update an item (partial update)
+  // Update an item (partial update — merges with existing data)
   await john.update('PROFILE', { theme: 'dark' });
 
   // Delete an item
   await john.delete('PROFILE');
-  
+
   // Fetch all items in this partition
   const allData = await john.getAll();
 }
 ```
 
-#### Second-Level Objects (Single-Row Operations)
+#### Item Objects (Single-Row Operations)
 
-For a more flexible way to work with individual rows, you can use `draft()` and `get()` to obtain an `Item` object, then call `save()` on it directly. You can also use a shorthand by passing a second argument to your model function (as shown in the examples below).
+For fine-grained control over individual rows, use `draft()` to get an `Item` object and call `save()` on it directly. Pass a second argument to the model function as a shorthand.
 
 ```typescript
-const john = db.User('john@example.com');
+const john = db.User('john@example.com'); // PK: USER#john@example.com
 
-// 1. Create a new row
+// 1. Create a new row via draft
 const johnMeta = john.draft('METADATA');
 johnMeta.name = 'John Doe';
 johnMeta.email = 'johndoe@johnmail.com';
 await johnMeta.save();
 
-// 2. Create with properties in arguments
+// 2. Draft with initial properties
 const johnStat = john.draft('STAT', { views: 100 });
 await johnStat.save();
 
-// 3. Get and update an existing row
+// 3. Get an existing row, modify, and save
 const johnBio = await john.get('BIO');
 johnBio.birthYear = 1986;
 await johnBio.save();
 
-// 4. Partial update without fetching
-await john.update('FRIEND#1', { Name: 'Alice', rank: 1 });
-
-// 5. Set properties during initialization
-const johnPref = john.draft('PREF', { theme: 'dark' });
+// 4. Shorthand: pass SK as second argument to get an Item directly
+const johnPref = db.User('john@example.com', 'PREF'); // PK: USER#john@example.com, SK: PREF
+johnPref.theme = 'dark';
 await johnPref.save();
-
-// 6. Shorthand access (returns an Item object directly)
-const johnMeta = db.User('john@example.com', 'METADATA');
-johnMeta.name = 'John Doe';
-await johnMeta.save();
 ```
 
 ### 2. Global Secondary Indexes (findBy)
 
-Use `findBy` to query your GSIs easily.
+Use `findBy` to query GSIs. By default, the GSI PK attribute name is `{indexName}PK` and the SK attribute name is `{indexName}SK`.
 
 ```typescript
 const db = new DynoQuery({
@@ -111,23 +128,22 @@ const db = new DynoQuery({
     Product: { pkPrefix: 'PROD#' }
   },
   findBy: {
-    Category: { indexName: 'GSI1', pkPrefix: 'CAT#' }, // pkName defaults to GSI1PK, skName defaults to GSI1SK
+    Category: { indexName: 'GSI1', pkPrefix: 'CAT#' }
+    // pkName defaults to 'GSI1PK', skName defaults to 'GSI1SK'
   }
 });
 
 async function indexExample() {
-  // Query by Category PK: CAT#ELECTRONICS
-  const electronics = db.findByCategory('ELECTRONICS');
-  
+  const electronics = db.findByCategory('ELECTRONICS'); // GSI1PK: CAT#ELECTRONICS
+
   // Get all items in this category
   const items = await electronics.getAll();
-  
-  // If results match a registered item prefix, they are automatically mapped
+
+  // Results are automatically mapped to registered models
   items.forEach(async item => {
     if (item.__model === 'Product') {
-      const productPartition = item.getPartition(); // Returns a Partition instance
-      
-      // Now you can also edit and save directly if it matches a item
+      const productPartition = item.getPartition();
+
       item.price = 45;
       await item.save();
     }
@@ -135,55 +151,58 @@ async function indexExample() {
 }
 ```
 
+> **Note:** When passing a `skValue` to `getAll()`, it filters using `begins_with` on the sort key. For example, `getAll({ skValue: 'RANK#' })` returns all items whose GSI SK starts with `RANK#`.
+
 ### 3. Creating Items with GSI Support
 
-You can pass index queries directly to `create()` or `update()` to automatically populate GSI attributes. This works on the Partition level.
+Pass index query objects to `create()` or `update()` to automatically populate GSI attributes.
 
 #### Using Partition.create() and Partition.update()
-```typescript
-const electronics = db.findByCategory('ELECTRONICS', 'RANK#1');
 
-// This will automatically set GSI1PK='CAT#ELECTRONICS' and GSI1SK='RANK#1'
-await db.Product('p123').create('INFO', { 
+```typescript
+const electronics = db.findByCategory('ELECTRONICS', 'RANK#1'); // GSI1PK: CAT#ELECTRONICS, GSI1SK: RANK#1
+
+await db.Product('p123').create('INFO', { // PK: PROD#p123
   name: 'Gaming Mouse',
   price: 50
 }, [electronics]);
 
 // Partial update with GSI support
-await db.Product('p123').update('INFO', { price: 45 }, [electronics]);
+await db.Product('p123').update('INFO', { price: 45 }, [electronics]); // PK: PROD#p123
 ```
 
-#### Using setIndex() for persistence
-You can also use `setIndex()` to attach indices to an item so they are used automatically whenever you call `save()`. This is useful when you have an Item object (e.g., from `draft()` or `get()`).
+#### Using setIndex() for Persistence
+
+Attach indices to an `Item` so they are included automatically on every `save()`.
 
 ```typescript
-const electronics = db.findByCategory('ELECTRONICS', 'RANK#1');
-const mouse = db.Product('p123', 'INFO');
+const electronics = db.findByCategory('ELECTRONICS', 'RANK#1'); // GSI1PK: CAT#ELECTRONICS, GSI1SK: RANK#1
+const mouse = db.Product('p123', 'INFO'); // PK: PROD#p123, SK: INFO
 
 mouse.setIndex(electronics);
 mouse.price = 50;
 
-// save() will now automatically include GSI attributes from the attached index
+// GSI attributes are included automatically
 await mouse.save();
 ```
 
 ### 4. Batch Operations
 
-DynoQuery provides `batchWrite` and `batchRead` for processing multiple items across partitions.
+`batchWrite` and `batchRead` handle multiple items across partitions. Requests are automatically chunked to respect DynamoDB limits (25 per write, 100 per read).
 
 ```typescript
-// 1. Batch Write (Create/Replace multiple items)
-const user1 = db.User('john@example.com', 'METADATA');
+// 1. Batch Write (create/replace multiple items)
+const user1 = db.User('john@example.com', 'METADATA'); // PK: USER#john@example.com, SK: METADATA
 user1.name = 'John Doe';
 
-const user2 = db.User('jane@example.com', 'METADATA');
+const user2 = db.User('jane@example.com', 'METADATA'); // PK: USER#jane@example.com, SK: METADATA
 user2.name = 'Jane Doe';
 
 await db.batchWrite([user1, user2]);
 
-// 2. Batch Read (Fetch multiple items or index queries)
-const userDraft = db.User('john@example.com', 'METADATA');
-const categoryQuery = db.findByCategory('ELECTRONICS', 'p123');
+// 2. Batch Read (fetch multiple items or index queries)
+const userDraft = db.User('john@example.com', 'METADATA'); // PK: USER#john@example.com, SK: METADATA
+const categoryQuery = db.findByCategory('ELECTRONICS', 'p123'); // GSI1PK: CAT#ELECTRONICS, GSI1SK: p123
 
 const results = await db.batchRead([userDraft, categoryQuery]);
 
@@ -191,35 +210,35 @@ results.forEach(item => {
   console.log(item.__model); // Automatically mapped to models
   if (item.__model === 'User') {
     item.status = 'active';
-    item.save(); // Second-level methods are available
+    item.save();
   }
 });
 
 // 3. Batch Delete
-const userToDelete = db.User('john@example.com').draftDelete('METADATA');
+const userToDelete = db.User('john@example.com').draftDelete('METADATA'); // PK: USER#john@example.com
 await db.batchWrite([userToDelete]);
 ```
 
 ### 5. Transaction Operations
 
-DynoQuery supports `transactWrite` and `transactRead` for atomic operations across multiple items.
+`transactWrite` and `transactRead` perform atomic operations. Requests are automatically chunked to respect DynamoDB's 100-item limit per transaction.
 
 ```typescript
-// 1. Transaction Write (All operations succeed or all fail)
-const user1 = db.User('john@example.com', 'METADATA');
+// 1. Transaction Write (all operations succeed or all fail)
+const user1 = db.User('john@example.com', 'METADATA'); // PK: USER#john@example.com, SK: METADATA
 user1.name = 'John Doe';
 
-const userToDelete = db.User('olduser@example.com').draftDelete('METADATA');
+const userToDelete = db.User('olduser@example.com').draftDelete('METADATA'); // PK: USER#olduser@example.com
 
-// You can even set conditions for items in a transaction
-const criticalItem = db.User('admin@example.com', 'METADATA');
+// Conditional write: only succeeds if status is 'ACTIVE'
+const criticalItem = db.User('admin@example.com', 'METADATA'); // PK: USER#admin@example.com, SK: METADATA
 criticalItem.lastLogin = new Date().toISOString();
 criticalItem.setCondition(attr('status').equals('ACTIVE'));
 
 await db.transactWrite([user1, userToDelete, criticalItem]);
 
-// 2. Transaction Read (Read multiple items atomically)
-const userDraft = db.User('john@example.com', 'METADATA');
+// 2. Transaction Read (read multiple items atomically)
+const userDraft = db.User('john@example.com', 'METADATA'); // PK: USER#john@example.com, SK: METADATA
 const items = await db.transactRead([userDraft]);
 
 if (items[0]) {
@@ -229,53 +248,77 @@ if (items[0]) {
 
 ### 6. Time To Live (TTL)
 
-DynamoDB TTL allows you to automatically delete items after a certain timestamp. To use it in DynoQuery, configure `ttlAttributeName` when initializing the client.
-
-> **Note:** DynoQuery does not enable TTL in DynamoDB. It only sets the values using the `ttl()` function. You must manually enable TTL for your table in the AWS Console or via CLI/CloudFormation first.
+Configure `ttlAttributeName` to enable TTL support. DynoQuery sets the TTL value on items — you must separately enable TTL on the DynamoDB table itself (via the AWS Console, CLI, or CloudFormation).
 
 ```typescript
 const db = new DynoQuery({
   region: 'us-east-1',
   tableName: 'MyTable',
-  ttlAttributeName: 'expireAt' // The attribute name which is set in DynamoDB to be used for TTL
+  ttlAttributeName: 'expireAt'
 });
 
 async function ttlExample() {
-  const session = db.User('john@example.com').draft('SESSION');
-  
-  // Set TTL to 1 hour from now (timestamp in seconds)
+  const session = db.User('john@example.com').draft('SESSION'); // PK: USER#john@example.com
+
+  // Set TTL to 1 hour from now (Unix timestamp in seconds)
   const ttl = Math.floor(Date.now() / 1000) + 3600;
   session.ttl(ttl);
-  
+
   session.data = 'some session data';
   await session.save();
 }
 ```
 
-## Optional Configuration Parameters
+## Configuration
+
+### DynoQuery Options
 
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `pkName` | `string` | `'PK'` | Custom attribute name for Partition Key. |
-| `skName` | `string` | `'SK'` | Custom attribute name for Sort Key. |
-| `pkPrefix` | `string` | `''` | Global prefix for all partitions (useful for multitenancy, e.g., `TENANT#A#`). |
-| `ttlAttributeName` | `string` | - | Optional attribute name for DynamoDB TTL. |
-| `endpoint` | `string` | - | Optional endpoint for local development (e.g., `http://localhost:8000`). |
-| `credentials` | `object` | - | Custom AWS credentials (`{ accessKeyId, secretAccessKey, sessionToken? }`). |
-
-### Example with Optional Parameters
+| `tableName` | `string` | - | The DynamoDB table name. |
+| `region` | `string` | - | AWS region. |
+| `pkName` | `string` | `'PK'` | Attribute name for the table Partition Key. |
+| `skName` | `string` | `'SK'` | Attribute name for the table Sort Key. |
+| `pkPrefix` | `string` | `''` | Global prefix for all partition keys (useful for multitenancy, e.g., `TENANT#A#`). |
+| `ttlAttributeName` | `string` | - | Attribute name configured for DynamoDB TTL. |
+| `endpoint` | `string` | - | Custom endpoint for local development (e.g., `http://localhost:8000`). |
+| `credentials` | `object` | - | AWS credentials `{ accessKeyId, secretAccessKey, sessionToken? }`. |
+| `models` | `object` | - | Map of model names to `{ pkPrefix: string }`. |
+| `findBy` | `object` | - | Map of index names to index config (see below). |
 
 ```typescript
 const db = new DynoQuery({
   region: 'us-east-1',
   tableName: 'MyTable',
-  pkName: 'PartitionKey', // Custom PK name
-  skName: 'SortKey',      // Custom SK name
-  pkPrefix: 'TENANT#A#',   // Global prefix for multitenancy
-  endpoint: 'http://localhost:8000', // For local DynamoDB
+  pkName: 'PartitionKey',
+  skName: 'SortKey',
+  pkPrefix: 'TENANT#A#',
+  endpoint: 'http://localhost:8000',
   credentials: {
     accessKeyId: 'MY_ACCESS_KEY',
     secretAccessKey: 'MY_SECRET_KEY'
+  }
+});
+```
+
+### findBy Index Options
+
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `indexName` | `string` | Required | The DynamoDB index name (e.g., `'GSI1'`). |
+| `pkName` | `string` | `'{indexName}PK'` | Attribute name for the GSI partition key. |
+| `skName` | `string` | `'{indexName}SK'` | Attribute name for the GSI sort key. |
+| `pkPrefix` | `string` | `''` | Prefix applied to PK values for this index. |
+
+```typescript
+const db = new DynoQuery({
+  // ...
+  findBy: {
+    // GSI1PK / GSI1SK auto-derived from indexName
+    Category: { indexName: 'GSI1', pkPrefix: 'CAT#' },
+
+    // Override attribute names explicitly
+    Status: { indexName: 'StatusIndex', pkName: 'StatusPK', skName: 'StatusSK' }
   }
 });
 ```
@@ -284,107 +327,131 @@ const db = new DynoQuery({
 
 ### Pagination
 
-Both `Partition.getAll()` and `IndexQuery.getAll()` support pagination.
+Both `Partition.getAll()` and `IndexQuery.getAll()` support pagination via `Limit` and `ExclusiveStartKey`.
 
 ```typescript
-const index = db.findByCategory('ELECTRONICS');
+const index = db.findByCategory('ELECTRONICS'); // GSI1PK: CAT#ELECTRONICS
 const items = await index.getAll({ Limit: 10 });
 
 const token = index.getLastEvaluatedKey();
 if (token) {
-  // Fetch next page
   const nextItems = await index.getAll({ Limit: 10, ExclusiveStartKey: token });
 }
 ```
 
-### Expression Builder (Filters & Conditions)
+Use `ScanIndexForward: false` to return results in descending sort key order:
 
-Use `ExpressionBuilder` to build complex filter and condition expressions in a type-safe way.
+```typescript
+const latest = await index.getAll({ Limit: 5, ScanIndexForward: false });
+```
+
+### Expression Builder
+
+Use `attr()` and `ExpressionBuilder` to build type-safe filter and condition expressions.
 
 ```typescript
 import { attr, ExpressionBuilder } from 'dynoquery';
 
 // 1. Filtering in queries
 const builder = attr('age').greaterThan(25).and(attr('status').equals('ACTIVE'));
-const activeUsers = await db.User('some-id').getAll({ filterBuilder: builder });
+const activeUsers = await db.User('some-id').getAll({ filterBuilder: builder }); // PK: USER#some-id
 
-// 2. Conditional Updates
-const johnMeta = db.User('john@example.com', 'METADATA');
-const condition = attr('version').equals(1);
-
-johnMeta.setCondition(condition);
+// 2. Conditional save — fails if version is not 1
+const johnMeta = db.User('john@example.com', 'METADATA'); // PK: USER#john@example.com, SK: METADATA
+johnMeta.setCondition(attr('version').equals(1));
 johnMeta.name = 'John New Name';
 johnMeta.version = 2;
-
-await johnMeta.save(); // Fails if version is not 1
-
-// 3. Raw Condition Expressions
-await db.User('john@example.com').update({ status: 'INACTIVE' }, [], {
-  ConditionExpression: '#v = :v',
-  ExpressionAttributeNames: { '#v': 'version' },
-  ExpressionAttributeValues: { ':v': 2 }
-});
-
-// Or using Item object
-johnMeta.setCondition(attr('name').exists());
 await johnMeta.save();
 
-// 4. Supported Operators
-// - attr('name').equals('val') / notEquals('val')
-// - .lessThan(val) / lessThanOrEqual(val)
-// - .greaterThan(val) / greaterThanOrEqual(val)
-// - .between(start, end)
-// - .in([val1, val2])
-// - logical: .and(otherBuilder), .or(otherBuilder), ExpressionBuilder.not(builder)
+// 3. Conditional create/update on the Partition level
+await db.User('john@example.com').create('METADATA', { name: 'John' }, [], { // PK: USER#john@example.com
+  conditionBuilder: attr('email').notExists()
+});
 
-// 4. Supported Functions
-// - attr('field').exists()
-// - attr('field').notExists()
-// - attr('field').type('S')
-// - attr('field').beginsWith('prefix')
-// - attr('field').contains('value')
-// - attr('field').size().greaterThan(5)
+// 4. NOT combinator
+const notPremium = ExpressionBuilder.not(attr('tier').equals('PREMIUM'));
+const users = await db.User('some-id').getAll({ filterBuilder: notPremium }); // PK: USER#some-id
 ```
+
+**Supported operators:**
+
+| Method | DynamoDB Expression |
+| :--- | :--- |
+| `.equals(val)` | `= val` |
+| `.notEquals(val)` | `<> val` |
+| `.lessThan(val)` | `< val` |
+| `.lessThanOrEqual(val)` | `<= val` |
+| `.greaterThan(val)` | `> val` |
+| `.greaterThanOrEqual(val)` | `>= val` |
+| `.between(start, end)` | `BETWEEN start AND end` |
+| `.in([val1, val2])` | `IN (val1, val2)` |
+| `.and(otherBuilder)` | `(a) AND (b)` |
+| `.or(otherBuilder)` | `(a) OR (b)` |
+| `ExpressionBuilder.not(builder)` | `NOT (a)` |
+
+**Supported functions:**
+
+| Method | DynamoDB Function |
+| :--- | :--- |
+| `attr('field').exists()` | `attribute_exists(field)` |
+| `attr('field').notExists()` | `attribute_not_exists(field)` |
+| `attr('field').type('S')` | `attribute_type(field, 'S')` |
+| `attr('field').beginsWith('prefix')` | `begins_with(field, 'prefix')` |
+| `attr('field').contains('value')` | `contains(field, 'value')` |
+| `attr('field').size().greaterThan(5)` | `size(field) > 5` |
 
 ## API Reference
 
 ### DynoQuery
-- `create(params)`: Low-level PutCommand wrapper.
-- `get(params)`: Low-level GetCommand wrapper.
-- `update(params)`: Low-level UpdateCommand wrapper.
-- `delete(params)`: Low-level DeleteCommand wrapper.
-- `query(params)`: Low-level QueryCommand wrapper.
-- `scan(params)`: Low-level ScanCommand wrapper.
-- `batchWrite(items)`: Batch persists multiple `Item` objects.
-- `batchRead(items)`: Batch fetches multiple `Item` or `IndexQuery` objects.
-- `transactWrite(items)`: Performs atomic write operations (Put/Delete) for up to 100 items.
-- `transactRead(items)`: Performs atomic read operations (Get) for up to 100 items.
-- `[ModelName](id, skValue?)`: Returns a `Partition` instance for the given ID. If `skValue` is provided, returns an `Item` object directly.
-- `findBy[IndexName](id, skValue?)`: Returns an `IndexQuery` instance.
+
+| Method | Description |
+| :--- | :--- |
+| `[ModelName](id, skValue?)` | Returns a `Partition` for the given ID. If `skValue` is provided, returns an `Item` directly. |
+| `findBy[IndexName](id, skValue?)` | Returns an `IndexQuery` for the given ID. |
+| `batchWrite(items)` | Persists multiple `Item` objects. Auto-chunks at 25 per DynamoDB limit. |
+| `batchRead(items)` | Fetches multiple `Item` objects. Auto-chunks at 100 per DynamoDB limit. |
+| `transactWrite(items)` | Atomic write (Put/Delete) for up to 100 items per chunk. |
+| `transactRead(items)` | Atomic read (Get) for up to 100 items per chunk. |
+| `create(params)` | Low-level `PutCommand` wrapper. |
+| `get(params)` | Low-level `GetCommand` wrapper. |
+| `update(params)` | Low-level `UpdateCommand` wrapper. |
+| `delete(params)` | Low-level `DeleteCommand` wrapper. |
+| `query(params)` | Low-level `QueryCommand` wrapper. |
+| `scan(params)` | Low-level `ScanCommand` wrapper. |
 
 ### Partition
-- `get(skValue)`: Fetches data for a specific Sort Key value (returns a Promise).
-- `getAll(options?)`: Fetches items in the partition. Options: `{ Limit, ExclusiveStartKey, filterBuilder, FilterExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
-- `create(skValue, data, indices?, options?)`: Creates an item. `options`: `{ conditionBuilder, ConditionExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
-- `update(skValue, data, indices?, options?)`: Partial update of an item. `options`: `{ conditionBuilder, ConditionExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
-- `delete(skValue, options?)`: Deletes an item. `options`: `{ conditionBuilder, ConditionExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
-- `draft(skValue, data?)`: Returns an `Item` object initialized with `data` (optional).
-- `draftDelete(skValue)`: Returns an `Item` object marked for deletion (for use with `batchWrite`).
-- `deleteAll()`: Deletes all items in the partition.
-- `getLastEvaluatedKey()`: Returns the pagination token from the last `getAll()`.
+
+| Method | Description |
+| :--- | :--- |
+| `get(skValue)` | Fetches a single item by SK. Returns an `Item` or `null`. |
+| `getAll(options?)` | Queries all items in the partition. Options: `Limit`, `ExclusiveStartKey`, `filterBuilder`, `FilterExpression`, `ExpressionAttributeNames`, `ExpressionAttributeValues`. |
+| `create(skValue, data, indices?, options?)` | Creates/replaces an item. `options`: `conditionBuilder`, `ConditionExpression`, `ExpressionAttributeNames`, `ExpressionAttributeValues`. |
+| `update(skValue, data, indices?, options?)` | Merges `data` with existing item and saves. Same `options` as `create`. |
+| `delete(skValue, options?)` | Deletes an item by SK. Same `options` as `create`. |
+| `draft(skValue, data?)` | Returns an unsaved `Item` initialized with optional `data`. |
+| `draftDelete(skValue)` | Returns an `Item` marked for deletion (for use with `batchWrite`). |
+| `deleteAll()` | Deletes all items in the partition. |
+| `getLastEvaluatedKey()` | Returns the pagination token from the last `getAll()`. |
 
 ### IndexQuery
-- `get(skValue?)`: Get a single item from the index.
-- `getAll(options?)`: Query index. Options: `{ Limit, ScanIndexForward, ExclusiveStartKey, skValue, filterBuilder, FilterExpression, ExpressionAttributeNames, ExpressionAttributeValues }`.
-- `getLastEvaluatedKey()`: Returns the pagination token from the last `getAll()`.
 
-### Item (returned by Partition.get or draft)
-- `save()`: Persists the current state of the item. Uses indices attached via `setIndex()` and internal `conditionBuilder`.
-- `ttl(timestamp)`: Sets the TTL attribute value. Only works if `ttlAttributeName` is configured in `DynoQueryConfig`.
-- `getData()`: Returns a clean data object containing only the database attributes (filters out internal state and methods).
-- `setIndex(indices)`: Attaches one or more `IndexQuery` objects to the item.
-- `setFilter(builder)`: Sets a filter expression builder for the item.
-- `setCondition(builder)`: Sets a condition for the item using an `ExpressionBuilder`.
+| Method | Description |
+| :--- | :--- |
+| `getAll(options?)` | Queries the index. Options: `Limit`, `ScanIndexForward`, `ExclusiveStartKey`, `skValue` (uses `begins_with`), `filterBuilder`, `FilterExpression`, `ExpressionAttributeNames`, `ExpressionAttributeValues`. |
+| `get(skValue?)` | Returns the first item matching the optional SK prefix. |
+| `getLastEvaluatedKey()` | Returns the pagination token from the last `getAll()`. |
+
+### Item
+
+| Method | Description |
+| :--- | :--- |
+| `save()` | Persists the item. Includes any attached indices and condition. |
+| `ttl(timestamp)` | Sets the TTL attribute value (requires `ttlAttributeName` in config). |
+| `getData()` | Returns a plain object with only the item's data attributes. |
+| `setIndex(index)` | Attaches one or more `IndexQuery` objects (included on every `save()`). |
+| `setFilter(builder)` | Sets a filter expression builder for the item. |
+| `setCondition(builder)` | Sets a condition expression applied on `save()`. |
+| `getPartition()` | Returns the parent `Partition` instance. |
 
 ## License
 
