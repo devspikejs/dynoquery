@@ -346,6 +346,16 @@ Use `ScanIndexForward: false` to return results in descending sort key order:
 const latest = await index.getAll({ Limit: 5, ScanIndexForward: false });
 ```
 
+### Projections
+
+Use `ProjectionExpression` to fetch only specific attributes. This is highly recommended for performance when dealing with large items.
+
+```typescript
+const items = await index.getAll({ 
+  ProjectionExpression: 'name, email, age' 
+});
+```
+
 ### Expression Builder
 
 Use `attr()` and `ExpressionBuilder` to build type-safe filter and condition expressions.
@@ -425,7 +435,7 @@ const users = await db.User('some-id').getAll({ filterBuilder: notPremium }); //
 | Method | Description |
 | :--- | :--- |
 | `get(skValue)` | Fetches a single item by SK. Returns an `Item` or `null`. |
-| `getAll(options?)` | Queries all items in the partition. Options: `Limit`, `ExclusiveStartKey`, `filterBuilder`, `FilterExpression`, `ExpressionAttributeNames`, `ExpressionAttributeValues`. |
+| `getAll(options?)` | Queries all items in the partition. Options: `Limit`, `ExclusiveStartKey`, `filterBuilder`, `FilterExpression`, `ProjectionExpression`, `ExpressionAttributeNames`, `ExpressionAttributeValues`. |
 | `create(skValue, data, indices?, options?)` | Creates/replaces an item. `options`: `conditionBuilder`, `ConditionExpression`, `ExpressionAttributeNames`, `ExpressionAttributeValues`. |
 | `update(skValue, data, indices?, options?)` | Merges `data` with existing item and saves. Same `options` as `create`. |
 | `delete(skValue, options?)` | Deletes an item by SK. Same `options` as `create`. |
@@ -438,7 +448,7 @@ const users = await db.User('some-id').getAll({ filterBuilder: notPremium }); //
 
 | Method | Description |
 | :--- | :--- |
-| `getAll(options?)` | Queries the index. Options: `Limit`, `ScanIndexForward`, `ExclusiveStartKey`, `skValue` (uses `begins_with`), `filterBuilder`, `FilterExpression`, `ExpressionAttributeNames`, `ExpressionAttributeValues`. |
+| `getAll(options?)` | Queries the index. Options: `Limit`, `ScanIndexForward`, `ExclusiveStartKey`, `skValue` (uses `begins_with`), `filterBuilder`, `FilterExpression`, `ProjectionExpression`, `ExpressionAttributeNames`, `ExpressionAttributeValues`. |
 | `get(skValue?)` | Returns the first item matching the optional SK prefix. |
 | `getLastEvaluatedKey()` | Returns the pagination token from the last `getAll()`. |
 

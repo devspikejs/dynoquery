@@ -172,6 +172,7 @@ export class Partition {
     ExclusiveStartKey?: any;
     filterBuilder?: ExpressionBuilder;
     FilterExpression?: string;
+    ProjectionExpression?: string;
     ExpressionAttributeNames?: Record<string, string>;
     ExpressionAttributeValues?: Record<string, any>;
   }): Promise<T[]> {
@@ -196,6 +197,7 @@ export class Partition {
       TableName: this.tableName,
       KeyConditionExpression: "#pk = :pk",
       FilterExpression: filterExpression,
+      ProjectionExpression: options?.ProjectionExpression,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,
       Limit: options?.Limit,
