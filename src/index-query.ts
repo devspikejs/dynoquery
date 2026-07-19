@@ -52,6 +52,7 @@ export class IndexQuery {
     skValue?: string;
     filterBuilder?: ExpressionBuilder;
     FilterExpression?: string;
+    ProjectionExpression?: string;
     ExpressionAttributeNames?: Record<string, string>;
     ExpressionAttributeValues?: Record<string, any>;
   }): Promise<T[]> {
@@ -87,6 +88,7 @@ export class IndexQuery {
       IndexName: this.indexName,
       KeyConditionExpression: keyCondition,
       FilterExpression: filterExpression,
+      ProjectionExpression: options?.ProjectionExpression,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,
       Limit: options?.Limit,
