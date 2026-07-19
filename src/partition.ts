@@ -14,6 +14,11 @@ export class Item {
   private _partition: Partition;
   private _skValue: string;
   private _toBeDeleted: boolean;
+  private _updateParams?: {
+    UpdateExpression: string;
+    ExpressionAttributeNames?: Record<string, string>;
+    ExpressionAttributeValues?: Record<string, any>;
+  };
   private _filterBuilder?: ExpressionBuilder;
   private _conditionBuilder?: ExpressionBuilder;
 
@@ -50,6 +55,12 @@ export class Item {
         }
         if (prop === "save") {
           return () => {
+            const updateParams = self._updateParams;
+            if (updateParams) {
+              return partition.updateRaw(skValue, updateParams, {
+                conditionBuilder: self._conditionBuilder,
+              });
+            }
             return partition.update(skValue, receiver.getData(), self._indices, {
               conditionBuilder: self._conditionBuilder,
             });
@@ -100,6 +111,19 @@ export class Item {
         }
         if (prop === "toBeDeleted") {
           return () => self._toBeDeleted;
+        }
+        if (prop === "updateAction") {
+          return (params: {
+            UpdateExpression: string;
+            ExpressionAttributeNames?: Record<string, string>;
+            ExpressionAttributeValues?: Record<string, any>;
+          }) => {
+            self._updateParams = params;
+            return receiver;
+          };
+        }
+        if (prop === "getUpdateParams") {
+          return () => self._updateParams;
         }
         return Reflect.get(target, prop, receiver);
       },
@@ -336,6 +360,58 @@ export class Partition {
     const current = await this._getRaw(skValue);
     const updated = { ...(current || {}), ...data } as T;
     return await this.create(skValue, updated, indices, options);
+  }
+
+  /**
+   * Update an item using raw update parameters (UpdateExpression).
+   */
+  async updateRaw(
+    skValue: string,
+    params: {
+      UpdateExpression: string;
+      ExpressionAttributeNames?: Record<string, string>;
+      ExpressionAttributeValues?: Record<string, any>;
+    },
+    options?: {
+      conditionBuilder?: ExpressionBuilder;
+    }
+  ): Promise<void> {
+    const updateParams: any = {
+      TableName: this.tableName,
+      Key: {
+        [this.pkName]: this.pkValue,
+        [this.skName]: skValue,
+      },
+      UpdateExpression: params.UpdateExpression,
+    };
+
+    if (params.ExpressionAttributeNames) {
+      updateParams.ExpressionAttributeNames = { ...params.ExpressionAttributeNames };
+    }
+    if (params.ExpressionAttributeValues) {
+      updateParams.ExpressionAttributeValues = { ...params.ExpressionAttributeValues };
+    }
+
+    if (options?.conditionBuilder) {
+      const { expression, attributeNames, attributeValues } = options.conditionBuilder.build();
+      updateParams.ConditionExpression = expression;
+      if (Object.keys(attributeNames).length > 0) {
+        updateParams.ExpressionAttributeNames = {
+          ...(updateParams.ExpressionAttributeNames || {}),
+          ...attributeNames,
+        };
+      }
+      if (Object.keys(attributeValues).length > 0) {
+        updateParams.ExpressionAttributeValues = {
+          ...(updateParams.ExpressionAttributeValues || {}),
+          ...attributeValues,
+        };
+      }
+    }
+
+    await this.db.update(updateParams);
+    // Clear cache because we don't know the new state without fetching
+    delete this.cache[skValue];
   }
 
   /**
