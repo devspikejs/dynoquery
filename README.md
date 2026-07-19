@@ -37,7 +37,8 @@ npm install dynoquery
 - Optimized for **Single-Table Design** (Partitions and GSIs)
 - Automatic result mapping to partition models
 - Built-in caching for partition instances
-- Batch and transaction support with automatic chunking
+- Batch operations with automatic chunking
+- Transaction support with atomicity guarantees (100-item limit enforced)
 - TypeScript support
 
 ## Quick Start
@@ -221,7 +222,7 @@ await db.batchWrite([userToDelete]);
 
 ### 5. Transaction Operations
 
-`transactWrite` and `transactRead` perform atomic operations. Requests are automatically chunked to respect DynamoDB's 100-item limit per transaction.
+`transactWrite` and `transactRead` perform atomic operations — all items succeed or all fail together. DynamoDB limits a single transaction to 100 items; exceeding this throws an error.
 
 ```typescript
 // 1. Transaction Write (all operations succeed or all fail)
@@ -410,8 +411,8 @@ const users = await db.User('some-id').getAll({ filterBuilder: notPremium }); //
 | `findBy[IndexName](id, skValue?)` | Returns an `IndexQuery` for the given ID. |
 | `batchWrite(items)` | Persists multiple `Item` objects. Auto-chunks at 25 per DynamoDB limit. |
 | `batchRead(items)` | Fetches multiple `Item` objects. Auto-chunks at 100 per DynamoDB limit. |
-| `transactWrite(items)` | Atomic write (Put/Delete) for up to 100 items per chunk. |
-| `transactRead(items)` | Atomic read (Get) for up to 100 items per chunk. |
+| `transactWrite(items)` | Atomic write (Put/Delete). Throws if more than 100 items are provided. |
+| `transactRead(items)` | Atomic read (Get). Throws if more than 100 items are provided. |
 | `create(params)` | Low-level `PutCommand` wrapper. |
 | `get(params)` | Low-level `GetCommand` wrapper. |
 | `update(params)` | Low-level `UpdateCommand` wrapper. |
