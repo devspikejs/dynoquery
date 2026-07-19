@@ -304,10 +304,11 @@ export class DynoQuery {
    * Transact write items to the table.
    */
   async transactWrite(items: Item[]) {
-    // Chunk items into 100
-    for (let i = 0; i < items.length; i += 100) {
-      const chunk = items.slice(i, i + 100);
-      const transactItems = chunk.map((item: any) => {
+    if (items.length > 100) {
+      throw new Error(`transactWrite supports up to 100 items per transaction, got ${items.length}.`);
+    }
+
+    const transactItems = items.map((item: any) => {
         const partition = item.getPartition();
         const tableName = partition.getTableName();
         const skValue = item.getSkValue();
@@ -367,12 +368,11 @@ export class DynoQuery {
         }
       });
 
-      await this.docClient.send(
-        new TransactWriteCommand({
-          TransactItems: transactItems,
-        })
-      );
-    }
+    await this.docClient.send(
+      new TransactWriteCommand({
+        TransactItems: transactItems,
+      })
+    );
 
     return items;
   }
@@ -381,12 +381,11 @@ export class DynoQuery {
    * Transact get items from the table.
    */
   async transactRead(items: (Item | IndexQuery)[]) {
-    const allItems: any[] = [];
+    if (items.length > 100) {
+      throw new Error(`transactRead supports up to 100 items per transaction, got ${items.length}.`);
+    }
 
-    // Chunk items into 100
-    for (let i = 0; i < items.length; i += 100) {
-      const chunk = items.slice(i, i + 100);
-      const transactItems = chunk.map((item: any) => {
+    const transactItems = items.map((item: any) => {
         let tableName: string;
         let pkValue: string;
         let skValue: string;
@@ -411,23 +410,23 @@ export class DynoQuery {
             },
           },
         };
+    });
+
+    const response = await this.docClient.send(
+      new TransactGetCommand({
+        TransactItems: transactItems,
+      })
+    );
+
+    const allItems: any[] = [];
+    if (response.Responses) {
+      response.Responses.forEach((res: any) => {
+        if (res.Item) {
+          allItems.push(this.mapItemToModelItem(res.Item));
+        } else {
+          allItems.push(null);
+        }
       });
-
-      const response = await this.docClient.send(
-        new TransactGetCommand({
-          TransactItems: transactItems,
-        })
-      );
-
-      if (response.Responses) {
-        response.Responses.forEach((res: any) => {
-          if (res.Item) {
-            allItems.push(this.mapItemToModelItem(res.Item));
-          } else {
-            allItems.push(null);
-          }
-        });
-      }
     }
 
     return allItems;
