@@ -141,6 +141,76 @@ describe("Transaction Operations", () => {
           })
         );
       });
+
+    it("should handle update in transactWrite", async () => {
+      const user = db.User("john").draft("METADATA");
+      (user as any).updateAction({
+        UpdateExpression: "SET #name = :name",
+        ExpressionAttributeNames: { "#name": "name" },
+        ExpressionAttributeValues: { ":name": "John Updated" },
+      });
+
+      mockSend.mockResolvedValue({});
+
+      await db.transactWrite([user]);
+
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: {
+            TransactItems: [
+              {
+                Update: {
+                  TableName: "TestTable",
+                  Key: {
+                    PK: "USER#john",
+                    SK: "METADATA",
+                  },
+                  UpdateExpression: "SET #name = :name",
+                  ExpressionAttributeNames: { "#name": "name" },
+                  ExpressionAttributeValues: { ":name": "John Updated" },
+                },
+              },
+            ],
+          },
+        })
+      );
+    });
+
+    it("should handle update with condition in transactWrite", async () => {
+      const user = db.User("john").draft("METADATA");
+      (user as any).updateAction({
+        UpdateExpression: "SET #name = :name",
+        ExpressionAttributeNames: { "#name": "name" },
+        ExpressionAttributeValues: { ":name": "John Updated" },
+      });
+      user.setCondition(attr("version").equals(1));
+
+      mockSend.mockResolvedValue({});
+
+      await db.transactWrite([user]);
+
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: {
+            TransactItems: [
+              {
+                Update: {
+                  TableName: "TestTable",
+                  Key: {
+                    PK: "USER#john",
+                    SK: "METADATA",
+                  },
+                  UpdateExpression: "SET #name = :name",
+                  ConditionExpression: "#n0 = :v0",
+                  ExpressionAttributeNames: { "#name": "name", "#n0": "version" },
+                  ExpressionAttributeValues: { ":name": "John Updated", ":v0": 1 },
+                },
+              },
+            ],
+          },
+        })
+      );
+    });
   });
 
   describe("transactRead", () => {

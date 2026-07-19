@@ -339,6 +339,44 @@ export class DynoQuery {
           return {
             Delete: deleteItem,
           };
+        } else if (item.getUpdateParams()) {
+          const updateParams = item.getUpdateParams();
+          const updateItem: any = {
+            Key: {
+              [this.pkName]: pkValue,
+              [this.skName]: skValue,
+            },
+            TableName: tableName,
+            UpdateExpression: updateParams.UpdateExpression,
+          };
+
+          if (updateParams.ExpressionAttributeNames) {
+            updateItem.ExpressionAttributeNames = { ...updateParams.ExpressionAttributeNames };
+          }
+          if (updateParams.ExpressionAttributeValues) {
+            updateItem.ExpressionAttributeValues = { ...updateParams.ExpressionAttributeValues };
+          }
+
+          if (conditionBuilder) {
+            const { expression, attributeNames, attributeValues } = conditionBuilder.build();
+            updateItem.ConditionExpression = expression;
+            if (Object.keys(attributeNames).length > 0) {
+              updateItem.ExpressionAttributeNames = {
+                ...(updateItem.ExpressionAttributeNames || {}),
+                ...attributeNames,
+              };
+            }
+            if (Object.keys(attributeValues).length > 0) {
+              updateItem.ExpressionAttributeValues = {
+                ...(updateItem.ExpressionAttributeValues || {}),
+                ...attributeValues,
+              };
+            }
+          }
+
+          return {
+            Update: updateItem,
+          };
         } else {
           const dataToSave = item.getData();
 

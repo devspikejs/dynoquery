@@ -84,6 +84,15 @@ async function userExample() {
   // Delete an item
   await john.delete('PROFILE');
 
+  // Update an item with UpdateExpression
+  const johnMeta = john.draft('METADATA');
+  johnMeta.updateAction({
+    UpdateExpression: 'SET #name = :name',
+    ExpressionAttributeNames: { '#name': 'name' },
+    ExpressionAttributeValues: { ':name': 'John Updated' }
+  });
+  await johnMeta.save();
+
   // Fetch all items in this partition
   const allData = await john.getAll();
 }
@@ -115,6 +124,15 @@ await johnBio.save();
 const johnPref = db.User('john@example.com', 'PREF'); // PK: USER#john@example.com, SK: PREF
 johnPref.theme = 'dark';
 await johnPref.save();
+
+// 5. Update with UpdateExpression (non-transactional)
+const johnUpdate = db.User('john@example.com', 'BIO');
+johnUpdate.updateAction({
+  UpdateExpression: 'SET #v = #v + :inc',
+  ExpressionAttributeNames: { '#v': 'version' },
+  ExpressionAttributeValues: { ':inc': 1 }
+});
+await johnUpdate.save();
 ```
 
 ### 2. Global Secondary Indexes (findBy)
@@ -236,7 +254,15 @@ const criticalItem = db.User('admin@example.com', 'METADATA'); // PK: USER#admin
 criticalItem.lastLogin = new Date().toISOString();
 criticalItem.setCondition(attr('status').equals('ACTIVE'));
 
-await db.transactWrite([user1, userToDelete, criticalItem]);
+// 4. Update operation in transaction
+const userToUpdate = db.User('john@example.com').draft('METADATA');
+userToUpdate.updateAction({
+  UpdateExpression: 'SET #name = :name',
+  ExpressionAttributeNames: { '#name': 'name' },
+  ExpressionAttributeValues: { ':name': 'John Updated' }
+});
+
+await db.transactWrite([user1, userToDelete, criticalItem, userToUpdate]);
 
 // 2. Transaction Read (read multiple items atomically)
 const userDraft = db.User('john@example.com', 'METADATA'); // PK: USER#john@example.com, SK: METADATA
@@ -421,7 +447,7 @@ const users = await db.User('some-id').getAll({ filterBuilder: notPremium }); //
 | `findBy[IndexName](id, skValue?)` | Returns an `IndexQuery` for the given ID. |
 | `batchWrite(items)` | Persists multiple `Item` objects. Auto-chunks at 25 per DynamoDB limit. |
 | `batchRead(items)` | Fetches multiple `Item` objects. Auto-chunks at 100 per DynamoDB limit. |
-| `transactWrite(items)` | Atomic write (Put/Delete). Throws if more than 100 items are provided. |
+| `transactWrite(items)` | Atomic write (Put/Update/Delete). Throws if more than 100 items are provided. |
 | `transactRead(items)` | Atomic read (Get). Throws if more than 100 items are provided. |
 | `create(params)` | Low-level `PutCommand` wrapper. |
 | `get(params)` | Low-level `GetCommand` wrapper. |
