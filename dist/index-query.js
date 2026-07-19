@@ -53,6 +53,7 @@ class IndexQuery {
                 IndexName: this.indexName,
                 KeyConditionExpression: keyCondition,
                 FilterExpression: filterExpression,
+                ProjectionExpression: options === null || options === void 0 ? void 0 : options.ProjectionExpression,
                 ExpressionAttributeNames: expressionAttributeNames,
                 ExpressionAttributeValues: expressionAttributeValues,
                 Limit: options === null || options === void 0 ? void 0 : options.Limit,

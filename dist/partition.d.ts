@@ -12,6 +12,7 @@ export declare class Item {
     private _partition;
     private _skValue;
     private _toBeDeleted;
+    private _updateParams?;
     private _filterBuilder?;
     private _conditionBuilder?;
     constructor(partition: Partition, skValue: string, data: any);
@@ -36,6 +37,7 @@ export declare class Partition {
         ExclusiveStartKey?: any;
         filterBuilder?: ExpressionBuilder;
         FilterExpression?: string;
+        ProjectionExpression?: string;
         ExpressionAttributeNames?: Record<string, string>;
         ExpressionAttributeValues?: Record<string, any>;
     }): Promise<T[]>;
@@ -61,6 +63,16 @@ export declare class Partition {
         ExpressionAttributeNames?: Record<string, string>;
         ExpressionAttributeValues?: Record<string, any>;
     }): Promise<T>;
+    /**
+     * Update an item using raw update parameters (UpdateExpression).
+     */
+    updateRaw(skValue: string, params: {
+        UpdateExpression: string;
+        ExpressionAttributeNames?: Record<string, string>;
+        ExpressionAttributeValues?: Record<string, any>;
+    }, options?: {
+        conditionBuilder?: ExpressionBuilder;
+    }): Promise<void>;
     /**
      * Delete an item by its SK within this partition.
      */
