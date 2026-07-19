@@ -42,6 +42,12 @@ class Item {
                 }
                 if (prop === "save") {
                     return () => {
+                        const updateParams = self._updateParams;
+                        if (updateParams) {
+                            return partition.updateRaw(skValue, updateParams, {
+                                conditionBuilder: self._conditionBuilder,
+                            });
+                        }
                         return partition.update(skValue, receiver.getData(), self._indices, {
                             conditionBuilder: self._conditionBuilder,
                         });
@@ -93,6 +99,15 @@ class Item {
                 }
                 if (prop === "toBeDeleted") {
                     return () => self._toBeDeleted;
+                }
+                if (prop === "updateAction") {
+                    return (params) => {
+                        self._updateParams = params;
+                        return receiver;
+                    };
+                }
+                if (prop === "getUpdateParams") {
+                    return () => self._updateParams;
                 }
                 return Reflect.get(target, prop, receiver);
             },
@@ -161,6 +176,7 @@ class Partition {
                 TableName: this.tableName,
                 KeyConditionExpression: "#pk = :pk",
                 FilterExpression: filterExpression,
+                ProjectionExpression: options === null || options === void 0 ? void 0 : options.ProjectionExpression,
                 ExpressionAttributeNames: expressionAttributeNames,
                 ExpressionAttributeValues: expressionAttributeValues,
                 Limit: options === null || options === void 0 ? void 0 : options.Limit,
@@ -254,6 +270,40 @@ class Partition {
             const current = yield this._getRaw(skValue);
             const updated = Object.assign(Object.assign({}, (current || {})), data);
             return yield this.create(skValue, updated, indices, options);
+        });
+    }
+    /**
+     * Update an item using raw update parameters (UpdateExpression).
+     */
+    updateRaw(skValue, params, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const updateParams = {
+                TableName: this.tableName,
+                Key: {
+                    [this.pkName]: this.pkValue,
+                    [this.skName]: skValue,
+                },
+                UpdateExpression: params.UpdateExpression,
+            };
+            if (params.ExpressionAttributeNames) {
+                updateParams.ExpressionAttributeNames = Object.assign({}, params.ExpressionAttributeNames);
+            }
+            if (params.ExpressionAttributeValues) {
+                updateParams.ExpressionAttributeValues = Object.assign({}, params.ExpressionAttributeValues);
+            }
+            if (options === null || options === void 0 ? void 0 : options.conditionBuilder) {
+                const { expression, attributeNames, attributeValues } = options.conditionBuilder.build();
+                updateParams.ConditionExpression = expression;
+                if (Object.keys(attributeNames).length > 0) {
+                    updateParams.ExpressionAttributeNames = Object.assign(Object.assign({}, (updateParams.ExpressionAttributeNames || {})), attributeNames);
+                }
+                if (Object.keys(attributeValues).length > 0) {
+                    updateParams.ExpressionAttributeValues = Object.assign(Object.assign({}, (updateParams.ExpressionAttributeValues || {})), attributeValues);
+                }
+            }
+            yield this.db.update(updateParams);
+            // Clear cache because we don't know the new state without fetching
+            delete this.cache[skValue];
         });
     }
     /**

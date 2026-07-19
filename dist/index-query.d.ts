@@ -26,6 +26,7 @@ export declare class IndexQuery {
         skValue?: string;
         filterBuilder?: ExpressionBuilder;
         FilterExpression?: string;
+        ProjectionExpression?: string;
         ExpressionAttributeNames?: Record<string, string>;
         ExpressionAttributeValues?: Record<string, any>;
     }): Promise<T[]>;

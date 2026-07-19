@@ -273,65 +273,94 @@ class DynoQuery {
      */
     transactWrite(items) {
         return __awaiter(this, void 0, void 0, function* () {
-            // Chunk items into 100
-            for (let i = 0; i < items.length; i += 100) {
-                const chunk = items.slice(i, i + 100);
-                const transactItems = chunk.map((item) => {
-                    const partition = item.getPartition();
-                    const tableName = partition.getTableName();
-                    const skValue = item.getSkValue();
-                    const pkValue = partition.getPkValue();
-                    const conditionBuilder = item.getConditionBuilder();
-                    if (item.toBeDeleted()) {
-                        const deleteItem = {
-                            Key: {
-                                [this.pkName]: pkValue,
-                                [this.skName]: skValue,
-                            },
-                            TableName: tableName,
-                        };
-                        if (conditionBuilder) {
-                            const { expression, attributeNames, attributeValues } = conditionBuilder.build();
-                            deleteItem.ConditionExpression = expression;
-                            if (Object.keys(attributeNames).length > 0) {
-                                deleteItem.ExpressionAttributeNames = attributeNames;
-                            }
-                            if (Object.keys(attributeValues).length > 0) {
-                                deleteItem.ExpressionAttributeValues = attributeValues;
-                            }
-                        }
-                        return {
-                            Delete: deleteItem,
-                        };
-                    }
-                    else {
-                        const dataToSave = item.getData();
-                        // Ensure PK and SK are in the data
-                        dataToSave[this.pkName] = pkValue;
-                        dataToSave[this.skName] = skValue;
-                        const putItem = {
-                            Item: dataToSave,
-                            TableName: tableName,
-                        };
-                        if (conditionBuilder) {
-                            const { expression, attributeNames, attributeValues } = conditionBuilder.build();
-                            putItem.ConditionExpression = expression;
-                            if (Object.keys(attributeNames).length > 0) {
-                                putItem.ExpressionAttributeNames = attributeNames;
-                            }
-                            if (Object.keys(attributeValues).length > 0) {
-                                putItem.ExpressionAttributeValues = attributeValues;
-                            }
-                        }
-                        return {
-                            Put: putItem,
-                        };
-                    }
-                });
-                yield this.docClient.send(new lib_dynamodb_1.TransactWriteCommand({
-                    TransactItems: transactItems,
-                }));
+            if (items.length > 100) {
+                throw new Error(`transactWrite supports up to 100 items per transaction, got ${items.length}.`);
             }
+            const transactItems = items.map((item) => {
+                const partition = item.getPartition();
+                const tableName = partition.getTableName();
+                const skValue = item.getSkValue();
+                const pkValue = partition.getPkValue();
+                const conditionBuilder = item.getConditionBuilder();
+                if (item.toBeDeleted()) {
+                    const deleteItem = {
+                        Key: {
+                            [this.pkName]: pkValue,
+                            [this.skName]: skValue,
+                        },
+                        TableName: tableName,
+                    };
+                    if (conditionBuilder) {
+                        const { expression, attributeNames, attributeValues } = conditionBuilder.build();
+                        deleteItem.ConditionExpression = expression;
+                        if (Object.keys(attributeNames).length > 0) {
+                            deleteItem.ExpressionAttributeNames = attributeNames;
+                        }
+                        if (Object.keys(attributeValues).length > 0) {
+                            deleteItem.ExpressionAttributeValues = attributeValues;
+                        }
+                    }
+                    return {
+                        Delete: deleteItem,
+                    };
+                }
+                else if (item.getUpdateParams()) {
+                    const updateParams = item.getUpdateParams();
+                    const updateItem = {
+                        Key: {
+                            [this.pkName]: pkValue,
+                            [this.skName]: skValue,
+                        },
+                        TableName: tableName,
+                        UpdateExpression: updateParams.UpdateExpression,
+                    };
+                    if (updateParams.ExpressionAttributeNames) {
+                        updateItem.ExpressionAttributeNames = Object.assign({}, updateParams.ExpressionAttributeNames);
+                    }
+                    if (updateParams.ExpressionAttributeValues) {
+                        updateItem.ExpressionAttributeValues = Object.assign({}, updateParams.ExpressionAttributeValues);
+                    }
+                    if (conditionBuilder) {
+                        const { expression, attributeNames, attributeValues } = conditionBuilder.build();
+                        updateItem.ConditionExpression = expression;
+                        if (Object.keys(attributeNames).length > 0) {
+                            updateItem.ExpressionAttributeNames = Object.assign(Object.assign({}, (updateItem.ExpressionAttributeNames || {})), attributeNames);
+                        }
+                        if (Object.keys(attributeValues).length > 0) {
+                            updateItem.ExpressionAttributeValues = Object.assign(Object.assign({}, (updateItem.ExpressionAttributeValues || {})), attributeValues);
+                        }
+                    }
+                    return {
+                        Update: updateItem,
+                    };
+                }
+                else {
+                    const dataToSave = item.getData();
+                    // Ensure PK and SK are in the data
+                    dataToSave[this.pkName] = pkValue;
+                    dataToSave[this.skName] = skValue;
+                    const putItem = {
+                        Item: dataToSave,
+                        TableName: tableName,
+                    };
+                    if (conditionBuilder) {
+                        const { expression, attributeNames, attributeValues } = conditionBuilder.build();
+                        putItem.ConditionExpression = expression;
+                        if (Object.keys(attributeNames).length > 0) {
+                            putItem.ExpressionAttributeNames = attributeNames;
+                        }
+                        if (Object.keys(attributeValues).length > 0) {
+                            putItem.ExpressionAttributeValues = attributeValues;
+                        }
+                    }
+                    return {
+                        Put: putItem,
+                    };
+                }
+            });
+            yield this.docClient.send(new lib_dynamodb_1.TransactWriteCommand({
+                TransactItems: transactItems,
+            }));
             return items;
         });
     }
@@ -340,48 +369,47 @@ class DynoQuery {
      */
     transactRead(items) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (items.length > 100) {
+                throw new Error(`transactRead supports up to 100 items per transaction, got ${items.length}.`);
+            }
+            const transactItems = items.map((item) => {
+                let tableName;
+                let pkValue;
+                let skValue;
+                if (item instanceof index_query_1.IndexQuery) {
+                    tableName = item.tableName;
+                    pkValue = item.getPkValue();
+                    skValue = item.getSkValue() || "";
+                }
+                else {
+                    const partition = item.getPartition();
+                    tableName = partition.getTableName();
+                    pkValue = partition.getPkValue();
+                    skValue = item.getSkValue();
+                }
+                return {
+                    Get: {
+                        TableName: tableName,
+                        Key: {
+                            [this.pkName]: pkValue,
+                            [this.skName]: skValue,
+                        },
+                    },
+                };
+            });
+            const response = yield this.docClient.send(new lib_dynamodb_1.TransactGetCommand({
+                TransactItems: transactItems,
+            }));
             const allItems = [];
-            // Chunk items into 100
-            for (let i = 0; i < items.length; i += 100) {
-                const chunk = items.slice(i, i + 100);
-                const transactItems = chunk.map((item) => {
-                    let tableName;
-                    let pkValue;
-                    let skValue;
-                    if (item instanceof index_query_1.IndexQuery) {
-                        tableName = item.tableName;
-                        pkValue = item.getPkValue();
-                        skValue = item.getSkValue() || "";
+            if (response.Responses) {
+                response.Responses.forEach((res) => {
+                    if (res.Item) {
+                        allItems.push(this.mapItemToModelItem(res.Item));
                     }
                     else {
-                        const partition = item.getPartition();
-                        tableName = partition.getTableName();
-                        pkValue = partition.getPkValue();
-                        skValue = item.getSkValue();
+                        allItems.push(null);
                     }
-                    return {
-                        Get: {
-                            TableName: tableName,
-                            Key: {
-                                [this.pkName]: pkValue,
-                                [this.skName]: skValue,
-                            },
-                        },
-                    };
                 });
-                const response = yield this.docClient.send(new lib_dynamodb_1.TransactGetCommand({
-                    TransactItems: transactItems,
-                }));
-                if (response.Responses) {
-                    response.Responses.forEach((res) => {
-                        if (res.Item) {
-                            allItems.push(this.mapItemToModelItem(res.Item));
-                        }
-                        else {
-                            allItems.push(null);
-                        }
-                    });
-                }
             }
             return allItems;
         });
